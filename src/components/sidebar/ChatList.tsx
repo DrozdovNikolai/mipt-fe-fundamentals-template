@@ -19,7 +19,7 @@ export function ChatList({ chats, activeChatId, onSelectChat }: ChatListProps) {
   }
 
   return (
-    <div className={styles.list}>
+    <ul className={styles.list}>
       {chats.map((chat) => (
         <ChatItem
           active={chat.id === activeChatId}
@@ -28,6 +28,6 @@ export function ChatList({ chats, activeChatId, onSelectChat }: ChatListProps) {
           onClick={() => onSelectChat(chat.id)}
         />
       ))}
-    </div>
+    </ul>
   );
 }

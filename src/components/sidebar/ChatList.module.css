@@ -1,8 +1,10 @@
 .list {
   display: grid;
   gap: 0.6rem;
+  margin: 0;
   overflow-y: auto;
-  padding-right: 0.25rem;
+  padding: 0 0.25rem 0 0;
+  list-style: none;
 }
 
 .empty {

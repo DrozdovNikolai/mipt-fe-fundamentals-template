@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import type { MessageData } from "../../types/chat";
+import type { MessageData, MessageVariant } from "../../types/chat";
 import { Icon } from "../ui/Icon";
 import styles from "./Message.module.css";
 
 interface MessageProps {
   message: MessageData;
+  variant: MessageVariant;
 }
 
-export function Message({ message }: MessageProps) {
+export function Message({ message, variant }: MessageProps) {
   const [copied, setCopied] = useState(false);
-  const isAssistant = message.role === "assistant";
+  const isAssistant = variant === "assistant";
 
   useEffect(() => {
     if (!copied) {

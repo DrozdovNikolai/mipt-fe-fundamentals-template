@@ -24,7 +24,7 @@ export function MessageList({ messages, showTyping }: MessageListProps) {
   return (
     <div className={styles.list} ref={containerRef}>
       {messages.map((message) => (
-        <Message key={message.id} message={message} />
+        <Message key={message.id} message={message} variant={message.role} />
       ))}
       <TypingIndicator isVisible={showTyping} />
     </div>
