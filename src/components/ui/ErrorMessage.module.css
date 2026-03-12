@@ -1,0 +1,12 @@
+.error {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-danger-soft) 90%, white);
+  padding: 0.8rem 0.95rem;
+  color: var(--color-danger);
+  font-size: 0.92rem;
+}

@@ -1,0 +1,68 @@
+.wrap {
+  border: 1px solid var(--color-border);
+  border-radius: 1.5rem;
+  background: color-mix(in srgb, var(--color-panel) 96%, white);
+  padding: 0.9rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.iconButton {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  box-shadow: var(--shadow-sm);
+}
+
+.iconButton:hover {
+  color: var(--color-text);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 2.75rem;
+  max-height: 9rem;
+  resize: none;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  line-height: 1.55;
+  outline: none;
+}
+
+.textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+@media (max-width: 700px) {
+  .controls {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+
+  .actions > * {
+    flex: 1;
+  }
+}

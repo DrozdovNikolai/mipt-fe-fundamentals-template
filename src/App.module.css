@@ -1,0 +1,7 @@
+.appRoot {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-accent-soft) 60%, transparent), transparent 30%),
+    linear-gradient(180deg, var(--color-bg-elevated), var(--color-bg));
+  color: var(--color-text);
+}
