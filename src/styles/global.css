@@ -33,10 +33,17 @@ svg {
   display: block;
 }
 
-input,
+input[type="search"],
+input[type="password"],
+input[type="number"],
 textarea,
 select {
   appearance: none;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: var(--color-accent);
 }
 
 #root {
