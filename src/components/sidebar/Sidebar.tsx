@@ -44,7 +44,7 @@ export function Sidebar({
 
       <footer className={styles.footer}>
         <span>{chats.length} чатов найдено</span>
-        <span>Mock data only</span>
+        <span>Streaming mock /api/chat</span>
       </footer>
     </section>
   );

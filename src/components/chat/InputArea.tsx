@@ -1,17 +1,29 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ChangeEvent, type FormEvent } from "react";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import styles from "./InputArea.module.css";
 
 interface InputAreaProps {
   value: string;
-  onChange: (value: string) => void;
-  onSubmit: (value: string) => void;
+  isLoading: boolean;
+  hasError: boolean;
+  onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
+  onStop: () => void;
+  onReload: () => void | Promise<void>;
 }
 
-export function InputArea({ value, onChange, onSubmit }: InputAreaProps) {
+export function InputArea({
+  value,
+  isLoading,
+  hasError,
+  onChange,
+  onSubmit,
+  onStop,
+  onReload,
+}: InputAreaProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const canSubmit = value.trim().length > 0;
+  const canSubmit = value.trim().length > 0 && !isLoading;
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -26,24 +38,21 @@ export function InputArea({ value, onChange, onSubmit }: InputAreaProps) {
     textarea.style.overflowY = textarea.scrollHeight > 144 ? "auto" : "hidden";
   }, [value]);
 
-  const handleSubmit = () => {
-    if (!canSubmit) {
-      return;
-    }
-
-    onSubmit(value);
-  };
-
   return (
-    <div className={styles.wrap}>
+    <form className={styles.wrap} onSubmit={onSubmit}>
       <div className={styles.controls}>
-        <button aria-label="Прикрепить изображение" className={styles.iconButton} type="button">
+        <button
+          aria-label="Прикрепить изображение"
+          className={styles.iconButton}
+          disabled
+          type="button"
+        >
           <Icon name="image" size={18} />
         </button>
 
         <textarea
           className={styles.textarea}
-          onChange={(event) => onChange(event.currentTarget.value)}
+          onChange={onChange}
           onKeyDown={(event) => {
             if (event.nativeEvent.isComposing) {
               return;
@@ -51,7 +60,7 @@ export function InputArea({ value, onChange, onSubmit }: InputAreaProps) {
 
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              handleSubmit();
+              event.currentTarget.form?.requestSubmit();
             }
           }}
           placeholder="Введите сообщение. Enter отправляет, Shift+Enter переносит строку."
@@ -61,16 +70,23 @@ export function InputArea({ value, onChange, onSubmit }: InputAreaProps) {
         />
 
         <div className={styles.actions}>
-          <Button disabled type="button" variant="ghost">
+          {hasError ? (
+            <Button onClick={onReload} type="button" variant="secondary">
+              <Icon name="refresh" size={18} />
+              Повторить
+            </Button>
+          ) : null}
+
+          <Button disabled={!isLoading} onClick={onStop} type="button" variant="ghost">
             <Icon name="stop" size={18} />
             Стоп
           </Button>
-          <Button disabled={!canSubmit} onClick={handleSubmit} type="button">
+          <Button disabled={!canSubmit} type="submit">
             <Icon name="send" size={18} />
-            Отправить
+            {isLoading ? "Отправка..." : "Отправить"}
           </Button>
         </div>
       </div>
-    </div>
+    </form>
   );
 }

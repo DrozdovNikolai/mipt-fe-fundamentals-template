@@ -1,5 +1,7 @@
-import type { ChatData } from "../../types/chat";
+import type { ChangeEvent, FormEvent } from "react";
+import type { MessageData } from "../../types/chat";
 import { EmptyState } from "../ui/EmptyState";
+import { ErrorMessage } from "../ui/ErrorMessage";
 import { Icon } from "../ui/Icon";
 import { Button } from "../ui/Button";
 import { InputArea } from "./InputArea";
@@ -7,20 +9,30 @@ import { MessageList } from "./MessageList";
 import styles from "./ChatWindow.module.css";
 
 interface ChatWindowProps {
-  chat: ChatData;
-  inputValue: string;
-  onInputChange: (value: string) => void;
-  onInputSubmit: (value: string) => void;
+  title: string;
+  messages: MessageData[];
+  input: string;
+  isLoading: boolean;
+  error: Error | null;
+  onInputChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
+  onStop: () => void;
+  onReload: () => void | Promise<void>;
   onOpenSettings: () => void;
   onOpenSidebar: () => void;
   showTyping: boolean;
 }
 
 export function ChatWindow({
-  chat,
-  inputValue,
+  title,
+  messages,
+  input,
+  isLoading,
+  error,
   onInputChange,
-  onInputSubmit,
+  onSubmit,
+  onStop,
+  onReload,
   onOpenSettings,
   onOpenSidebar,
   showTyping,
@@ -41,7 +53,7 @@ export function ChatWindow({
 
           <div>
             <p className={styles.meta}>Текущий чат</p>
-            <h2 className={styles.title}>{chat.title}</h2>
+            <h2 className={styles.title}>{title}</h2>
           </div>
         </div>
 
@@ -52,14 +64,24 @@ export function ChatWindow({
       </header>
 
       <div className={styles.content}>
-        {chat.messages.length ? (
-          <MessageList messages={chat.messages} showTyping={showTyping} />
+        {messages.length ? (
+          <MessageList messages={messages} showTyping={showTyping} />
         ) : (
           <EmptyState />
         )}
       </div>
 
-      <InputArea value={inputValue} onChange={onInputChange} onSubmit={onInputSubmit} />
+      {error ? <ErrorMessage message={error.message} /> : null}
+
+      <InputArea
+        hasError={Boolean(error)}
+        isLoading={isLoading}
+        onChange={onInputChange}
+        onReload={onReload}
+        onStop={onStop}
+        onSubmit={onSubmit}
+        value={input}
+      />
     </section>
   );
 }
