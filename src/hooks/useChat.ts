@@ -5,7 +5,7 @@ import {
   useState,
   type ChangeEvent,
   type Dispatch,
-  type FormEvent,
+  type InputEvent,
   type SetStateAction,
 } from "react";
 
@@ -31,7 +31,7 @@ export type UseChatResult = {
   handleInputChange: (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
-  handleSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  handleSubmit: (event: InputEvent<HTMLFormElement>) => Promise<void>;
   isLoading: boolean;
   error: Error | null;
   stop: () => void;
@@ -233,7 +233,7 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
     }
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: InputEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!input.trim() || isLoading) {
