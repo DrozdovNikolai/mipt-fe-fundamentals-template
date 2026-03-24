@@ -47,7 +47,11 @@ export function Message({ message, variant }: MessageProps) {
 
         <div className={styles.meta}>
           <span>{message.author}</span>
-          <span>{message.createdAt}</span>
+          {message.timestamp ? (
+            <time dateTime={message.timestamp}>{message.createdAt}</time>
+          ) : (
+            <span>{message.createdAt}</span>
+          )}
         </div>
 
         <div className={styles.bubble}>

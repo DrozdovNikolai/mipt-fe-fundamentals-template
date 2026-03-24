@@ -87,6 +87,7 @@ const toUiMessages = (existingMessages: MessageData[], nextMessages: ChatMessage
         author: existingMessage?.author ?? resolveAuthor(message.role),
         content: message.content,
         createdAt: existingMessage?.createdAt ?? formatCreatedAt(message.createdAt),
+        timestamp: existingMessage?.timestamp ?? message.createdAt?.toISOString(),
       };
     });
 };

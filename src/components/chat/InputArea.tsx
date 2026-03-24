@@ -1,28 +1,25 @@
-import { useEffect, useRef, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import styles from "./InputArea.module.css";
 
 interface InputAreaProps {
-  value: string;
   isLoading: boolean;
   hasError: boolean;
-  onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
+  onSubmitMessage: (content: string) => void | Promise<void>;
   onStop: () => void;
   onReload: () => void | Promise<void>;
 }
 
 export function InputArea({
-  value,
   isLoading,
   hasError,
-  onChange,
-  onSubmit,
+  onSubmitMessage,
   onStop,
   onReload,
 }: InputAreaProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [value, setValue] = useState("");
   const canSubmit = value.trim().length > 0 && !isLoading;
 
   useEffect(() => {
@@ -38,8 +35,28 @@ export function InputArea({
     textarea.style.overflowY = textarea.scrollHeight > 144 ? "auto" : "hidden";
   }, [value]);
 
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    textareaRef.current?.focus();
+  }, [isLoading]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!canSubmit) {
+      return;
+    }
+
+    const messageContent = value;
+    setValue("");
+    await onSubmitMessage(messageContent);
+  };
+
   return (
-    <form className={styles.wrap} onSubmit={onSubmit}>
+    <form aria-busy={isLoading} className={styles.wrap} onSubmit={handleSubmit}>
       <div className={styles.controls}>
         <button
           aria-label="Прикрепить изображение"
@@ -52,7 +69,8 @@ export function InputArea({
 
         <textarea
           className={styles.textarea}
-          onChange={onChange}
+          disabled={isLoading}
+          onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {
             if (event.nativeEvent.isComposing) {
               return;
@@ -63,7 +81,11 @@ export function InputArea({
               event.currentTarget.form?.requestSubmit();
             }
           }}
-          placeholder="Введите сообщение. Enter отправляет, Shift+Enter переносит строку."
+          placeholder={
+            isLoading
+              ? "Дождитесь ответа ассистента..."
+              : "Введите сообщение. Enter отправляет, Shift+Enter переносит строку."
+          }
           ref={textareaRef}
           rows={1}
           value={value}
@@ -83,7 +105,7 @@ export function InputArea({
           </Button>
           <Button disabled={!canSubmit} type="submit">
             <Icon name="send" size={18} />
-            {isLoading ? "Отправка..." : "Отправить"}
+            {isLoading ? "Ждем ответ..." : "Отправить"}
           </Button>
         </div>
       </div>

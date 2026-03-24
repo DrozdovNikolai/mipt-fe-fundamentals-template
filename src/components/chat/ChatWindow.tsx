@@ -1,4 +1,3 @@
-import type { ChangeEvent, FormEvent } from "react";
 import type { MessageData } from "../../types/chat";
 import { EmptyState } from "../ui/EmptyState";
 import { ErrorMessage } from "../ui/ErrorMessage";
@@ -11,11 +10,9 @@ import styles from "./ChatWindow.module.css";
 interface ChatWindowProps {
   title: string;
   messages: MessageData[];
-  input: string;
   isLoading: boolean;
   error: Error | null;
-  onInputChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
+  onSubmitMessage: (content: string) => void | Promise<void>;
   onStop: () => void;
   onReload: () => void | Promise<void>;
   onOpenSettings: () => void;
@@ -26,11 +23,9 @@ interface ChatWindowProps {
 export function ChatWindow({
   title,
   messages,
-  input,
   isLoading,
   error,
-  onInputChange,
-  onSubmit,
+  onSubmitMessage,
   onStop,
   onReload,
   onOpenSettings,
@@ -76,11 +71,9 @@ export function ChatWindow({
       <InputArea
         hasError={Boolean(error)}
         isLoading={isLoading}
-        onChange={onInputChange}
         onReload={onReload}
         onStop={onStop}
-        onSubmit={onSubmit}
-        value={input}
+        onSubmitMessage={onSubmitMessage}
       />
     </section>
   );

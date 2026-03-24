@@ -10,23 +10,19 @@ interface MessageListProps {
 }
 
 export function MessageList({ messages, showTyping }: MessageListProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const element = containerRef.current;
-    if (!element) {
-      return;
-    }
-
-    element.scrollTop = element.scrollHeight;
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, showTyping]);
 
   return (
-    <div className={styles.list} ref={containerRef}>
+    <div className={styles.list}>
       {messages.map((message) => (
         <Message key={message.id} message={message} variant={message.role} />
       ))}
       <TypingIndicator isVisible={showTyping} />
+      <div aria-hidden="true" className={styles.scrollAnchor} ref={endRef} />
     </div>
   );
 }

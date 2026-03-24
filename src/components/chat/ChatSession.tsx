@@ -38,6 +38,7 @@ const toHookMessage = (message: MessageData): ChatMessage => ({
   id: message.id,
   role: message.role,
   content: message.content,
+  createdAt: message.timestamp ? new Date(message.timestamp) : undefined,
 });
 
 const toUiMessage = (message: ChatMessage, existingMessage?: MessageData): MessageData => ({
@@ -46,6 +47,7 @@ const toUiMessage = (message: ChatMessage, existingMessage?: MessageData): Messa
   author: existingMessage?.author ?? resolveAuthor(message.role),
   content: message.content,
   createdAt: existingMessage?.createdAt ?? formatMessageTime(message.createdAt),
+  timestamp: existingMessage?.timestamp ?? message.createdAt?.toISOString(),
 });
 
 const isVisibleMessage = (message: ChatMessage) =>
@@ -64,11 +66,10 @@ export function ChatSession({
     syncMessagesRef.current = onMessagesChange;
   }, [onMessagesChange]);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, stop, reload } =
-    useChat({
-      api,
-      initialMessages: chat.messages.map(toHookMessage),
-    });
+  const { messages, submitMessage, isLoading, error, stop, reload } = useChat({
+    api,
+    initialMessages: chat.messages.map(toHookMessage),
+  });
 
   useEffect(() => {
     syncMessagesRef.current(chat.id, messages);
@@ -85,15 +86,13 @@ export function ChatSession({
   return (
     <ChatWindow
       error={error}
-      input={input}
       isLoading={isLoading}
       messages={visibleMessages}
-      onInputChange={handleInputChange}
       onOpenSettings={onOpenSettings}
       onOpenSidebar={onOpenSidebar}
       onReload={reload}
       onStop={stop}
-      onSubmit={handleSubmit}
+      onSubmitMessage={submitMessage}
       showTyping={showTyping}
       title={chat.title}
     />

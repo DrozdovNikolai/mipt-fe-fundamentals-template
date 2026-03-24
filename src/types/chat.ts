@@ -16,6 +16,7 @@ export interface MessageData {
   author: string;
   content: string;
   createdAt: string;
+  timestamp?: string;
 }
 
 export interface ChatData {
