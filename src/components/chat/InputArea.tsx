@@ -24,19 +24,6 @@ export function InputArea({
   const canSubmit = trimmedValue.length > 0 && !isLoading;
 
   useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      return;
-    }
-
-    textarea.style.height = "0px";
-
-    const nextHeight = Math.min(textarea.scrollHeight, 144);
-    textarea.style.height = `${nextHeight}px`;
-    textarea.style.overflowY = textarea.scrollHeight > 144 ? "auto" : "hidden";
-  }, [value]);
-
-  useEffect(() => {
     if (isLoading) {
       return;
     }
