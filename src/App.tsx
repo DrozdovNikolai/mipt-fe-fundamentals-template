@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./App.module.css";
 import { AuthForm } from "./components/auth/AuthForm";
 import { ChatSession } from "./components/chat/ChatSession";
@@ -110,6 +110,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settings, setSettings] = useState(defaultSettings);
   const [draftSettings, setDraftSettings] = useState<SettingsData>(defaultSettings);
+  const appliedTheme = isSettingsOpen ? draftSettings.theme : settings.theme;
 
   const filteredChats = chats.filter((chat) => {
     const normalizedQuery = searchValue.trim().toLowerCase();
@@ -185,8 +186,12 @@ function App() {
     );
   };
 
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", appliedTheme);
+  }, [appliedTheme]);
+
   return (
-    <div className={styles.appRoot} data-theme={settings.theme}>
+    <div className={styles.appRoot}>
       {!isAuthenticated ? (
         <AuthForm onSubmit={handleLogin} />
       ) : (

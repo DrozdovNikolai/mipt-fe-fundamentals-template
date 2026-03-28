@@ -20,7 +20,8 @@ export function InputArea({
 }: InputAreaProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [value, setValue] = useState("");
-  const canSubmit = value.trim().length > 0 && !isLoading;
+  const trimmedValue = value.trim();
+  const canSubmit = trimmedValue.length > 0 && !isLoading;
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -68,8 +69,10 @@ export function InputArea({
         </button>
 
         <textarea
+          aria-label="Введите сообщение"
           className={styles.textarea}
           disabled={isLoading}
+          enterKeyHint={isLoading ? "done" : "send"}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {
             if (event.nativeEvent.isComposing) {
@@ -99,14 +102,17 @@ export function InputArea({
             </Button>
           ) : null}
 
-          <Button disabled={!isLoading} onClick={onStop} type="button" variant="ghost">
-            <Icon name="stop" size={18} />
-            Стоп
-          </Button>
-          <Button disabled={!canSubmit} type="submit">
-            <Icon name="send" size={18} />
-            {isLoading ? "Ждем ответ..." : "Отправить"}
-          </Button>
+          {isLoading ? (
+            <Button onClick={onStop} type="button" variant="ghost">
+              <Icon name="stop" size={18} />
+              Стоп
+            </Button>
+          ) : (
+            <Button disabled={!canSubmit} type="submit">
+              <Icon name="send" size={18} />
+              Отправить
+            </Button>
+          )}
         </div>
       </div>
     </form>

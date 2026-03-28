@@ -1,6 +1,7 @@
 .message {
   display: flex;
   gap: 0.85rem;
+  min-width: 0;
   max-width: min(48rem, 100%);
 }
 
@@ -29,21 +30,25 @@
   position: relative;
   display: grid;
   gap: 0.5rem;
+  min-width: 0;
   max-width: min(42rem, 100%);
 }
 
 .meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.75rem;
   color: var(--color-text-muted);
   font-size: 0.8rem;
 }
 
 .bubble {
+  min-width: 0;
   border: 1px solid var(--color-border);
   border-radius: 1.35rem;
   background: color-mix(in srgb, var(--color-panel) 95%, white);
+  overflow: hidden;
   padding: 1rem 1.1rem;
   box-shadow: var(--shadow-sm);
 }
@@ -75,11 +80,15 @@
   transition:
     opacity 180ms ease,
     transform 180ms ease,
-    color 180ms ease;
+    color 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+  touch-action: manipulation;
 }
 
-.message:hover .copy,
-.message:focus-within .copy {
+.assistant:hover .copy,
+.assistant:focus-within .copy,
+.copied {
   opacity: 1;
   transform: translateY(0);
 }
@@ -88,9 +97,17 @@
   color: var(--color-text);
 }
 
+.copied {
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent-soft) 70%, var(--color-surface));
+  color: var(--color-text);
+}
+
 .markdown {
   color: var(--color-text);
   line-height: 1.65;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .markdown p,
@@ -134,6 +151,15 @@
   color: inherit;
 }
 
+@media (hover: none) {
+  .copy {
+    position: static;
+    width: max-content;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (max-width: 640px) {
   .message {
     max-width: 100%;
@@ -145,5 +171,9 @@
 
   .user .body {
     max-width: 100%;
+  }
+
+  .bubble {
+    padding: 0.9rem 1rem;
   }
 }

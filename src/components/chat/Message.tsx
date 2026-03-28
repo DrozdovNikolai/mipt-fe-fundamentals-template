@@ -18,7 +18,7 @@ export function Message({ message, variant }: MessageProps) {
       return;
     }
 
-    const timeoutId = window.setTimeout(() => setCopied(false), 1600);
+    const timeoutId = window.setTimeout(() => setCopied(false), 2000);
     return () => window.clearTimeout(timeoutId);
   }, [copied]);
 
@@ -40,10 +40,16 @@ export function Message({ message, variant }: MessageProps) {
       {isAssistant ? <div className={styles.avatar}>G</div> : null}
 
       <div className={styles.body}>
-        <button className={styles.copy} onClick={handleCopy} type="button">
-          <Icon name="copy" size={14} />
-          {copied ? "Скопировано" : "Копировать"}
-        </button>
+        {isAssistant ? (
+          <button
+            className={[styles.copy, copied ? styles.copied : ""].filter(Boolean).join(" ")}
+            onClick={handleCopy}
+            type="button"
+          >
+            <Icon name="copy" size={14} />
+            {copied ? "Скопировано" : "Копировать"}
+          </button>
+        ) : null}
 
         <div className={styles.meta}>
           <span>{message.author}</span>
