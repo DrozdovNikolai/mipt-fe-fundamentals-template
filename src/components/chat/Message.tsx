@@ -1,8 +1,26 @@
 import { useEffect, useState } from "react";
+import hljs from "highlight.js/lib/core";
+import bash from "highlight.js/lib/languages/bash";
+import css from "highlight.js/lib/languages/css";
+import javascript from "highlight.js/lib/languages/javascript";
+import json from "highlight.js/lib/languages/json";
+import markdown from "highlight.js/lib/languages/markdown";
+import typescript from "highlight.js/lib/languages/typescript";
+import xml from "highlight.js/lib/languages/xml";
 import ReactMarkdown from "react-markdown";
 import type { MessageData, MessageVariant } from "../../types/chat";
 import { Icon } from "../ui/Icon";
 import styles from "./Message.module.css";
+
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("css", css);
+hljs.registerLanguage("html", xml);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("markdown", markdown);
+hljs.registerLanguage("tsx", typescript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("xml", xml);
 
 interface MessageProps {
   message: MessageData;
@@ -62,7 +80,37 @@ export function Message({ message, variant }: MessageProps) {
 
         <div className={styles.bubble}>
           <div className={styles.markdown}>
-            <ReactMarkdown>{message.content}</ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                code({ className, children, ...props }) {
+                  const code = String(children).replace(/\n$/, "");
+                  const language = className?.replace("language-", "") ?? "";
+
+                  if (!className?.startsWith("language-")) {
+                    return (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  }
+
+                  const highlightedCode = language && hljs.getLanguage(language)
+                    ? hljs.highlight(code, { language }).value
+                    : hljs.highlightAuto(code).value;
+
+                  return (
+                    <pre className={styles.codeBlock}>
+                      <code
+                        className={`hljs ${className ?? ""}`.trim()}
+                        dangerouslySetInnerHTML={{ __html: highlightedCode }}
+                      />
+                    </pre>
+                  );
+                },
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
           </div>
         </div>
       </div>

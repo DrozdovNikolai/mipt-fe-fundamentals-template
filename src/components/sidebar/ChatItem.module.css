@@ -41,6 +41,11 @@
   box-shadow: var(--shadow-md);
 }
 
+.editing .trigger {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+}
+
 .row {
   display: flex;
   align-items: flex-start;
@@ -58,6 +63,27 @@
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.editor {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.editorInput {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+  background: var(--color-panel);
+  color: var(--color-text);
+  padding: 0.55rem 0.75rem;
+  outline: none;
+}
+
+.editorInput:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent-soft) 55%, transparent);
 }
 
 .date {
@@ -93,7 +119,8 @@
 
 .item:hover .actions,
 .item:focus-within .actions,
-.active .actions {
+.active .actions,
+.editing .actions {
   opacity: 1;
   transform: translateY(0);
 }
@@ -108,6 +135,7 @@
   background: color-mix(in srgb, var(--color-panel) 92%, white);
   color: var(--color-text-muted);
   box-shadow: var(--shadow-sm);
+  touch-action: manipulation;
 }
 
 .iconButton:hover {

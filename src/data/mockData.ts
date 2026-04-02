@@ -1,10 +1,9 @@
 import type { ChatData, ModelOption, ScopeOption, SettingsData } from "../types/chat";
 
 export const modelOptions: ModelOption[] = [
-  "GigaChat",
-  "GigaChat-Plus",
-  "GigaChat-Pro",
-  "GigaChat-Max",
+  "GigaChat-2",
+  "GigaChat-2-Pro",
+  "GigaChat-2-Max",
 ];
 
 export const scopeOptions: ScopeOption[] = [
@@ -14,7 +13,7 @@ export const scopeOptions: ScopeOption[] = [
 ];
 
 export const defaultSettings: SettingsData = {
-  model: "GigaChat-Pro",
+  model: "GigaChat-2-Pro",
   temperature: 0.7,
   topP: 0.85,
   maxTokens: 2048,

@@ -1,4 +1,5 @@
-import type { MessageData } from "../../types/chat";
+import { useChatStore } from "../../app/providers/ChatProvider";
+import { useLocation, useNavigate } from "react-router-dom";
 import { EmptyState } from "../ui/EmptyState";
 import { ErrorMessage } from "../ui/ErrorMessage";
 import { Icon } from "../ui/Icon";
@@ -8,30 +9,22 @@ import { MessageList } from "./MessageList";
 import styles from "./ChatWindow.module.css";
 
 interface ChatWindowProps {
-  title: string;
-  messages: MessageData[];
-  isLoading: boolean;
-  error: Error | null;
-  onSubmitMessage: (content: string) => void | Promise<void>;
-  onStop: () => void;
-  onReload: () => void | Promise<void>;
   onOpenSettings: () => void;
   onOpenSidebar: () => void;
-  showTyping: boolean;
 }
 
 export function ChatWindow({
-  title,
-  messages,
-  isLoading,
-  error,
-  onSubmitMessage,
-  onStop,
-  onReload,
   onOpenSettings,
   onOpenSidebar,
-  showTyping,
 }: ChatWindowProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { activeChat, reloadLastResponse, sendMessage, state, stopGeneration } = useChatStore();
+  const messages = activeChat?.messages ?? [];
+  const lastMessage = messages[messages.length - 1];
+  const showTyping = state.isLoading && (!lastMessage || !lastMessage.content.trim());
+  const title = activeChat?.title ?? "Новый диалог";
+
   return (
     <section className={styles.window}>
       <header className={styles.header}>
@@ -66,14 +59,20 @@ export function ChatWindow({
         )}
       </div>
 
-      {error ? <ErrorMessage message={error.message} /> : null}
+      {state.error ? <ErrorMessage message={state.error} /> : null}
 
       <InputArea
-        hasError={Boolean(error)}
-        isLoading={isLoading}
-        onReload={onReload}
-        onStop={onStop}
-        onSubmitMessage={onSubmitMessage}
+        hasError={Boolean(state.error)}
+        isLoading={state.isLoading}
+        onReload={reloadLastResponse}
+        onStop={stopGeneration}
+        onSubmitMessage={async (content) => {
+          const chatId = await sendMessage(content);
+
+          if (chatId && location.pathname !== `/chat/${chatId}`) {
+            navigate(`/chat/${chatId}`);
+          }
+        }}
       />
     </section>
   );

@@ -151,6 +151,18 @@
   color: inherit;
 }
 
+.codeBlock {
+  margin: 0;
+}
+
+.codeBlock :global(.hljs) {
+  display: block;
+  overflow-x: auto;
+  border-radius: 1rem;
+  background: transparent;
+  padding: 0;
+}
+
 @media (hover: none) {
   .copy {
     position: static;
