@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Children, isValidElement, useEffect, useState, type ReactNode } from "react";
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
 import css from "highlight.js/lib/languages/css";
@@ -26,6 +26,39 @@ interface MessageProps {
   message: MessageData;
   variant: MessageVariant;
 }
+
+const extractCodeText = (value: ReactNode): string =>
+  Children.toArray(value)
+    .map((child) => {
+      if (typeof child === "string" || typeof child === "number") {
+        return String(child);
+      }
+
+      if (isValidElement<{ children?: ReactNode }>(child)) {
+        return extractCodeText(child.props.children);
+      }
+
+      return "";
+    })
+    .join("");
+
+const renderHighlightedCode = (code: string, className?: string) => {
+  const language = className?.replace("language-", "") ?? "";
+  const normalizedCode = code.replace(/\n$/, "");
+  const highlightedCode =
+    language && hljs.getLanguage(language)
+      ? hljs.highlight(normalizedCode, { language }).value
+      : hljs.highlightAuto(normalizedCode).value;
+
+  return (
+    <pre className={styles.codeBlock}>
+      <code
+        className={`hljs ${className ?? ""}`.trim()}
+        dangerouslySetInnerHTML={{ __html: highlightedCode }}
+      />
+    </pre>
+  );
+};
 
 export function Message({ message, variant }: MessageProps) {
   const [copied, setCopied] = useState(false);
@@ -82,29 +115,23 @@ export function Message({ message, variant }: MessageProps) {
           <div className={styles.markdown}>
             <ReactMarkdown
               components={{
-                code({ className, children, ...props }) {
-                  const code = String(children).replace(/\n$/, "");
-                  const language = className?.replace("language-", "") ?? "";
+                pre({ children }) {
+                  const firstChild = Children.toArray(children)[0];
 
-                  if (!className?.startsWith("language-")) {
-                    return (
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    );
+                  if (!isValidElement<{ className?: string; children?: ReactNode }>(firstChild)) {
+                    return <pre>{children}</pre>;
                   }
 
-                  const highlightedCode = language && hljs.getLanguage(language)
-                    ? hljs.highlight(code, { language }).value
-                    : hljs.highlightAuto(code).value;
-
+                  return renderHighlightedCode(
+                    extractCodeText(firstChild.props.children),
+                    firstChild.props.className,
+                  );
+                },
+                code({ className, children, ...props }) {
                   return (
-                    <pre className={styles.codeBlock}>
-                      <code
-                        className={`hljs ${className ?? ""}`.trim()}
-                        dangerouslySetInnerHTML={{ __html: highlightedCode }}
-                      />
-                    </pre>
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
                   );
                 },
               }}
