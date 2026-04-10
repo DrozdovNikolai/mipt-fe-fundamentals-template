@@ -180,7 +180,7 @@ const updateChatCollection = (
 const initialPersistedState = loadPersistedChatState();
 const initialChats = normalizeChats(initialPersistedState?.chats ?? buildInitialChats());
 
-const initialState: ChatState = {
+export const initialChatState: ChatState = {
   chats: initialChats,
   activeChatId: resolveActiveChatId(initialPersistedState?.activeChatId ?? initialChats[0]?.id ?? null, initialChats),
   isLoading: false,
@@ -189,7 +189,7 @@ const initialState: ChatState = {
   settings: initialPersistedState?.settings ?? defaultSettings,
 };
 
-const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
+export const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
   switch (action.type) {
     case "HYDRATE": {
       const chats = normalizeChats(action.payload.chats);
@@ -349,7 +349,7 @@ const buildApiMessages = (messages: MessageData[], systemPrompt: string) => {
 };
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(chatReducer, initialState);
+  const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastRequestRef = useRef<StoredRequest | null>(null);
 
