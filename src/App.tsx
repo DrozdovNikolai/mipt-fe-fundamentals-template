@@ -1,14 +1,25 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { AppRoutes } from "./app/router/routes";
 import { useChatStore } from "./app/providers/ChatProvider";
 import styles from "./App.module.css";
 import { AuthForm } from "./components/auth/AuthForm";
 import { AppLayout } from "./components/layout/AppLayout";
-import { SettingsPanel } from "./components/settings/SettingsPanel";
-import { Sidebar } from "./components/sidebar/Sidebar";
+import { AsyncFallback } from "./components/ui/AsyncFallback";
+
+const Sidebar = lazy(() =>
+  import("./components/sidebar/Sidebar").then((module) => ({
+    default: module.Sidebar,
+  })),
+);
+
+const SettingsPanel = lazy(() =>
+  import("./components/settings/SettingsPanel").then((module) => ({
+    default: module.SettingsPanel,
+  })),
+);
 
 function App() {
-  const { state, login, updateSettings } = useChatStore();
+  const { login, state, updateSettings } = useChatStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [draftSettings, setDraftSettings] = useState(state.settings);
@@ -24,42 +35,70 @@ function App() {
     }
   }, [isSettingsOpen, state.settings]);
 
-  const openSettings = () => {
+  const openSettings = useCallback(() => {
     setDraftSettings(state.settings);
     setIsSettingsOpen(true);
-  };
+  }, [state.settings]);
 
-  const closeSettings = () => {
+  const closeSettings = useCallback(() => {
     setDraftSettings(state.settings);
     setIsSettingsOpen(false);
-  };
+  }, [state.settings]);
 
-  const saveSettings = () => {
+  const saveSettings = useCallback(() => {
     updateSettings(draftSettings);
     setIsSettingsOpen(false);
-  };
+  }, [draftSettings, updateSettings]);
 
-  const resetSettings = () => {
+  const resetSettings = useCallback(() => {
     setDraftSettings(state.settings);
-  };
+  }, [state.settings]);
+
+  const openSidebar = useCallback(() => {
+    setIsSidebarOpen(true);
+  }, []);
+
+  const closeSidebar = useCallback(() => {
+    setIsSidebarOpen(false);
+  }, []);
+
+  if (!state.authSession) {
+    return <AuthForm onSubmit={login} />;
+  }
 
   return (
     <div className={styles.appRoot}>
-      {!state.authSession ? (
-        <AuthForm onSubmit={login} />
-      ) : (
-        <>
-          <AppLayout
-            isSidebarOpen={isSidebarOpen}
-            onCloseSidebar={() => setIsSidebarOpen(false)}
-            sidebar={<Sidebar onNavigate={() => setIsSidebarOpen(false)} />}
+      <AppLayout
+        isSidebarOpen={isSidebarOpen}
+        onCloseSidebar={closeSidebar}
+        sidebar={
+          <Suspense
+            fallback={
+              <AsyncFallback
+                description="Подгружаем список диалогов и поиск."
+                title="Загрузка Sidebar"
+              />
+            }
           >
-            <AppRoutes
-              onOpenSettings={openSettings}
-              onOpenSidebar={() => setIsSidebarOpen(true)}
-            />
-          </AppLayout>
+            <Sidebar onNavigate={closeSidebar} />
+          </Suspense>
+        }
+      >
+        <AppRoutes
+          onOpenSettings={openSettings}
+          onOpenSidebar={openSidebar}
+        />
+      </AppLayout>
 
+      {isSettingsOpen ? (
+        <Suspense
+          fallback={
+            <AsyncFallback
+              description="Подгружаем панель настроек модели."
+              title="Загрузка настроек"
+            />
+          }
+        >
           <SettingsPanel
             isOpen={isSettingsOpen}
             settings={draftSettings}
@@ -68,8 +107,8 @@ function App() {
             onSave={saveSettings}
             onReset={resetSettings}
           />
-        </>
-      )}
+        </Suspense>
+      ) : null}
     </div>
   );
 }

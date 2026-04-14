@@ -8,6 +8,7 @@ import markdown from "highlight.js/lib/languages/markdown";
 import typescript from "highlight.js/lib/languages/typescript";
 import xml from "highlight.js/lib/languages/xml";
 import ReactMarkdown from "react-markdown";
+import "highlight.js/styles/github-dark.css";
 import type { MessageData, MessageVariant } from "../../types/chat";
 import { Icon } from "../ui/Icon";
 import styles from "./Message.module.css";

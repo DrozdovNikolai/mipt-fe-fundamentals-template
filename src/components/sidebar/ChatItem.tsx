@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import type { ChatData } from "../../types/chat";
 import { Icon } from "../ui/Icon";
 import styles from "./ChatItem.module.css";
@@ -11,7 +11,7 @@ interface ChatItemProps {
   onClick: () => void;
 }
 
-export function ChatItem({ chat, active, onDelete, onRename, onClick }: ChatItemProps) {
+export const ChatItem = memo(function ChatItem({ chat, active, onDelete, onRename, onClick }: ChatItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(chat.title);
 
@@ -129,4 +129,4 @@ export function ChatItem({ chat, active, onDelete, onRename, onClick }: ChatItem
       </div>
     </li>
   );
-}
+});

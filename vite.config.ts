@@ -413,4 +413,39 @@ const mockStreamingApiPlugin = (): Plugin => {
 
 export default defineConfig({
   plugins: [react(), mockStreamingApiPlugin()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/highlight.js")) {
+            return "syntax-highlight";
+          }
+
+          if (
+            id.includes("node_modules/react-markdown") ||
+            id.includes("node_modules/micromark") ||
+            id.includes("node_modules/mdast-") ||
+            id.includes("node_modules/hast-") ||
+            id.includes("node_modules/remark-") ||
+            id.includes("node_modules/unist-") ||
+            id.includes("node_modules/vfile") ||
+            id.includes("node_modules/property-information") ||
+            id.includes("node_modules/comma-separated-tokens") ||
+            id.includes("node_modules/space-separated-tokens")
+          ) {
+            return "markdown-renderer";
+          }
+
+          if (
+            id.includes("node_modules/react-router") ||
+            id.includes("node_modules/@remix-run/router")
+          ) {
+            return "router";
+          }
+
+          return undefined;
+        },
+      },
+    },
+  },
 });

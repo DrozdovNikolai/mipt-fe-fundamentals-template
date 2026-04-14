@@ -5,3 +5,43 @@
     linear-gradient(180deg, var(--color-bg-elevated), var(--color-bg));
   color: var(--color-text);
 }
+
+.configScreen {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 1.5rem;
+}
+
+.configPanel {
+  display: grid;
+  gap: 1rem;
+  width: min(38rem, 100%);
+  border: 1px solid var(--color-border);
+  border-radius: 1.75rem;
+  background: color-mix(in srgb, var(--color-panel) 94%, white);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.configPanel h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+}
+
+.configPanel p {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.configCode {
+  display: grid;
+  gap: 0.45rem;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-bg) 92%, black 8%);
+  padding: 1rem;
+  color: #e7edf8;
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 0.92rem;
+}

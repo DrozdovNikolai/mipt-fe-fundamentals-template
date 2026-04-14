@@ -1,6 +1,8 @@
+import { useCallback } from "react";
 import { useChatStore } from "../../app/providers/ChatProvider";
 import { useLocation, useNavigate } from "react-router-dom";
 import { EmptyState } from "../ui/EmptyState";
+import { ErrorBoundary } from "../ui/ErrorBoundary";
 import { ErrorMessage } from "../ui/ErrorMessage";
 import { Icon } from "../ui/Icon";
 import { Button } from "../ui/Button";
@@ -24,6 +26,15 @@ export function ChatWindow({
   const lastMessage = messages[messages.length - 1];
   const showTyping = state.isLoading && (!lastMessage || !lastMessage.content.trim());
   const title = activeChat?.title ?? "Новый диалог";
+  const resetKey = activeChat?.id ?? "empty-chat";
+
+  const handleSubmitMessage = useCallback(async (content: string) => {
+    const chatId = await sendMessage(content);
+
+    if (chatId && location.pathname !== `/chat/${chatId}`) {
+      navigate(`/chat/${chatId}`);
+    }
+  }, [location.pathname, navigate, sendMessage]);
 
   return (
     <section className={styles.window}>
@@ -52,11 +63,16 @@ export function ChatWindow({
       </header>
 
       <div className={styles.content}>
-        {messages.length ? (
-          <MessageList messages={messages} showTyping={showTyping} />
-        ) : (
-          <EmptyState />
-        )}
+        <ErrorBoundary
+          fallbackMessage="Ошибка рендера сообщений. Список чатов и поле ввода продолжают работать."
+          resetKey={resetKey}
+        >
+          {messages.length ? (
+            <MessageList messages={messages} showTyping={showTyping} />
+          ) : (
+            <EmptyState />
+          )}
+        </ErrorBoundary>
       </div>
 
       {state.error ? <ErrorMessage message={state.error} /> : null}
@@ -66,13 +82,7 @@ export function ChatWindow({
         isLoading={state.isLoading}
         onReload={reloadLastResponse}
         onStop={stopGeneration}
-        onSubmitMessage={async (content) => {
-          const chatId = await sendMessage(content);
-
-          if (chatId && location.pathname !== `/chat/${chatId}`) {
-            navigate(`/chat/${chatId}`);
-          }
-        }}
+        onSubmitMessage={handleSubmitMessage}
       />
     </section>
   );

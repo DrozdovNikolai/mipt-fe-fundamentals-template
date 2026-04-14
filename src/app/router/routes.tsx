@@ -1,40 +1,41 @@
-import { useEffect } from "react";
-import { Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
-import { useChatStore } from "../providers/ChatProvider";
-import { ChatWindow } from "../../components/chat/ChatWindow";
+import { lazy, Suspense } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { AsyncFallback } from "../../components/ui/AsyncFallback";
 
 interface AppRoutesProps {
   onOpenSettings: () => void;
   onOpenSidebar: () => void;
 }
 
-function RoutedChatWindow(props: AppRoutesProps) {
-  const { chatId } = useParams();
-  const navigate = useNavigate();
-  const { state, setActiveChatId } = useChatStore();
+const HomeRoute = lazy(() => import("./HomeRoute"));
+const ChatRoute = lazy(() => import("./ChatRoute"));
 
-  useEffect(() => {
-    if (!chatId) {
-      return;
-    }
-
-    const hasChat = state.chats.some((chat) => chat.id === chatId);
-    if (!hasChat) {
-      navigate("/", { replace: true });
-      return;
-    }
-
-    setActiveChatId(chatId);
-  }, [chatId, navigate, setActiveChatId, state.chats]);
-
-  return <ChatWindow {...props} />;
-}
+const routeFallback = (
+  <AsyncFallback
+    description="Подгружаем маршрут и данные интерфейса."
+    title="Загрузка экрана"
+  />
+);
 
 export function AppRoutes(props: AppRoutesProps) {
   return (
     <Routes>
-      <Route element={<ChatWindow {...props} />} path="/" />
-      <Route element={<RoutedChatWindow {...props} />} path="/chat/:id" />
+      <Route
+        element={
+          <Suspense fallback={routeFallback}>
+            <HomeRoute {...props} />
+          </Suspense>
+        }
+        path="/"
+      />
+      <Route
+        element={
+          <Suspense fallback={routeFallback}>
+            <ChatRoute {...props} />
+          </Suspense>
+        }
+        path="/chat/:id"
+      />
       <Route element={<Navigate replace to="/" />} path="*" />
     </Routes>
   );

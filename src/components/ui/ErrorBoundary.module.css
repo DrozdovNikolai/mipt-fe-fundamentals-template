@@ -1,0 +1,17 @@
+.fallback {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  min-height: 14rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1.4rem;
+  background: color-mix(in srgb, var(--color-panel) 94%, white);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}

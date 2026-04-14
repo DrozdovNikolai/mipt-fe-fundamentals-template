@@ -1,4 +1,4 @@
-import { useDeferredValue, useState } from "react";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useChatStore } from "../../app/providers/ChatProvider";
 import { Button } from "../ui/Button";
@@ -19,33 +19,41 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const [searchValue, setSearchValue] = useState("");
   const deferredSearchValue = useDeferredValue(searchValue.trim().toLowerCase());
 
-  const filteredChats = state.chats.filter((chat) => {
-    if (!deferredSearchValue) {
-      return true;
-    }
+  const filteredChats = useMemo(
+    () =>
+      state.chats.filter((chat) => {
+        if (!deferredSearchValue) {
+          return true;
+        }
 
-    const lastMessageContent = collapseWhitespace(chat.messages[chat.messages.length - 1]?.content ?? "")
-      .toLowerCase();
+        const lastMessageContent = collapseWhitespace(chat.messages[chat.messages.length - 1]?.content ?? "")
+          .toLowerCase();
 
-    return (
-      chat.title.toLowerCase().includes(deferredSearchValue) ||
-      lastMessageContent.includes(deferredSearchValue)
-    );
-  });
+        return (
+          chat.title.toLowerCase().includes(deferredSearchValue) ||
+          lastMessageContent.includes(deferredSearchValue)
+        );
+      }),
+    [deferredSearchValue, state.chats],
+  );
 
-  const handleSelectChat = (chatId: string) => {
+  const handleSelectChat = useCallback((chatId: string) => {
     setActiveChatId(chatId);
     navigate(`/chat/${chatId}`);
     onNavigate?.();
-  };
+  }, [navigate, onNavigate, setActiveChatId]);
 
-  const handleNewChat = () => {
+  const handleNewChat = useCallback(() => {
     const chatId = createChat();
     navigate(`/chat/${chatId}`);
     onNavigate?.();
-  };
+  }, [createChat, navigate, onNavigate]);
 
-  const handleDeleteChat = (chatId: string) => {
+  const handleRenameChat = useCallback((chatId: string, title: string) => {
+    renameChat(chatId, title);
+  }, [renameChat]);
+
+  const handleDeleteChat = useCallback((chatId: string) => {
     const chat = state.chats.find((item) => item.id === chatId);
     if (!chat) {
       return;
@@ -63,7 +71,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
     }
 
     onNavigate?.();
-  };
+  }, [deleteChat, navigate, onNavigate, state.activeChatId, state.chats]);
 
   return (
     <section className={styles.sidebar}>
@@ -86,7 +94,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           activeChatId={state.activeChatId}
           chats={filteredChats}
           onDeleteChat={handleDeleteChat}
-          onRenameChat={renameChat}
+          onRenameChat={handleRenameChat}
           onSelectChat={handleSelectChat}
         />
       </div>

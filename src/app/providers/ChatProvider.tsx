@@ -1,13 +1,16 @@
 import {
   createContext,
   startTransition,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   type ReactNode,
 } from "react";
 import { requestAssistantCompletion, type GigaChatMessage } from "../../api/gigachat";
+import { configuredAuthSession } from "../../config/env";
 import { defaultSettings, mockChats } from "../../data/mockData";
 import {
   loadAuthSession,
@@ -179,13 +182,14 @@ const updateChatCollection = (
 
 const initialPersistedState = loadPersistedChatState();
 const initialChats = normalizeChats(initialPersistedState?.chats ?? buildInitialChats());
+const initialAuthSession = configuredAuthSession ?? loadAuthSession();
 
 export const initialChatState: ChatState = {
   chats: initialChats,
   activeChatId: resolveActiveChatId(initialPersistedState?.activeChatId ?? initialChats[0]?.id ?? null, initialChats),
   isLoading: false,
   error: null,
-  authSession: loadAuthSession(),
+  authSession: initialAuthSession,
   settings: initialPersistedState?.settings ?? defaultSettings,
 };
 
@@ -362,47 +366,56 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [state.activeChatId, state.chats, state.settings]);
 
   useEffect(() => {
+    if (configuredAuthSession) {
+      saveAuthSession(null);
+      return;
+    }
+
     saveAuthSession(state.authSession);
   }, [state.authSession]);
 
-  const login = (values: AuthFormValues) => {
+  const login = useCallback((values: AuthFormValues) => {
     dispatch({
       type: "SET_AUTH_SESSION",
       payload: values,
     });
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
+    if (configuredAuthSession) {
+      return;
+    }
+
     dispatch({
       type: "SET_AUTH_SESSION",
       payload: null,
     });
-  };
+  }, []);
 
-  const updateSettings = (settings: SettingsData) => {
+  const updateSettings = useCallback((settings: SettingsData) => {
     dispatch({
       type: "SET_SETTINGS",
       payload: settings,
     });
-  };
+  }, []);
 
-  const setActiveChatId = (chatId: string | null) => {
+  const setActiveChatId = useCallback((chatId: string | null) => {
     dispatch({
       type: "SET_ACTIVE_CHAT",
       payload: chatId,
     });
-  };
+  }, []);
 
-  const createChat = () => {
+  const createChat = useCallback(() => {
     const chat = buildNewChat(state.chats);
     dispatch({
       type: "CREATE_CHAT",
       payload: chat,
     });
     return chat.id;
-  };
+  }, [state.chats]);
 
-  const renameChat = (chatId: string, title: string) => {
+  const renameChat = useCallback((chatId: string, title: string) => {
     const nextTitle = collapseWhitespace(title);
     if (!nextTitle) {
       return;
@@ -415,9 +428,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         title: nextTitle,
       },
     });
-  };
+  }, []);
 
-  const deleteChat = (chatId: string) => {
+  const deleteChat = useCallback((chatId: string) => {
     if (lastRequestRef.current?.chatId === chatId) {
       abortControllerRef.current?.abort();
       abortControllerRef.current = null;
@@ -434,13 +447,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         chatId,
       },
     });
-  };
+  }, []);
 
-  const runAssistantRequest = async (chatId: string, requestMessages: GigaChatMessage[]) => {
-    if (!state.authSession) {
+  const runAssistantRequest = useCallback(async (chatId: string, requestMessages: GigaChatMessage[]) => {
+    const authSession = state.authSession;
+
+    if (!authSession) {
       dispatch({
         type: "SET_ERROR",
-        payload: "Сначала войдите по credentials GigaChat.",
+        payload: "Сначала задайте credentials через переменные окружения или форму входа.",
       });
       return;
     }
@@ -473,7 +488,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     try {
       const fullText = await requestAssistantCompletion({
-        authSession: state.authSession,
+        authSession,
         settings: state.settings,
         messages: requestMessages,
         signal: abortController.signal,
@@ -529,9 +544,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         payload: false,
       });
     }
-  };
+  }, [state.authSession, state.settings]);
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = useCallback(async (content: string) => {
     if (!collapseWhitespace(content) || state.isLoading) {
       return state.activeChatId;
     }
@@ -562,47 +577,64 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     await runAssistantRequest(chatId, requestMessages);
 
     return chatId;
-  };
+  }, [runAssistantRequest, state.activeChatId, state.chats, state.isLoading, state.settings.systemPrompt]);
 
-  const reloadLastResponse = async () => {
+  const reloadLastResponse = useCallback(async () => {
     if (!lastRequestRef.current || state.isLoading) {
       return;
     }
 
     const { chatId, messages } = lastRequestRef.current;
     await runAssistantRequest(chatId, messages);
-  };
+  }, [runAssistantRequest, state.isLoading]);
 
-  const stopGeneration = () => {
+  const stopGeneration = useCallback(() => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     dispatch({
       type: "SET_LOADING",
       payload: false,
     });
-  };
+  }, []);
 
-  const activeChat = state.activeChatId
-    ? state.chats.find((chat) => chat.id === state.activeChatId) ?? null
-    : null;
+  const activeChat = useMemo(
+    () => (state.activeChatId ? state.chats.find((chat) => chat.id === state.activeChatId) ?? null : null),
+    [state.activeChatId, state.chats],
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      state,
+      activeChat,
+      login,
+      logout,
+      updateSettings,
+      setActiveChatId,
+      createChat,
+      renameChat,
+      deleteChat,
+      sendMessage,
+      reloadLastResponse,
+      stopGeneration,
+    }),
+    [
+      activeChat,
+      createChat,
+      deleteChat,
+      login,
+      logout,
+      reloadLastResponse,
+      renameChat,
+      sendMessage,
+      setActiveChatId,
+      state,
+      stopGeneration,
+      updateSettings,
+    ],
+  );
 
   return (
-    <ChatContext.Provider
-      value={{
-        state,
-        activeChat,
-        login,
-        logout,
-        updateSettings,
-        setActiveChatId,
-        createChat,
-        renameChat,
-        deleteChat,
-        sendMessage,
-        reloadLastResponse,
-        stopGeneration,
-      }}
-    >
+    <ChatContext.Provider value={contextValue}>
       {children}
     </ChatContext.Provider>
   );
