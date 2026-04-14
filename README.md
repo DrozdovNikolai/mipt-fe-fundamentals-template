@@ -6,7 +6,7 @@ Frontend-клиент чата на React + TypeScript + Vite. Приложен�
 
 [Публичная ссылка на развёрнутое приложение](https://fe-gilt-eight.vercel.app?_vercel_share=mqZfMRC6CIuwXp2ovjD2wL9YNdhHzoK2)
 
-Скриншоты или видео-запись работы: добавьте после публикации приложения.
+Скриншоты или видео-запись работы:
 
 - `docs/demo-auth.png` — экран fallback-авторизации;
 - `docs/demo-chat.png` — основной экран чата;
