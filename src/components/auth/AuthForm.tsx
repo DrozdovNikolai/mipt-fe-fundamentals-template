@@ -43,21 +43,6 @@ export function AuthForm({ onSubmit }: AuthFormProps) {
           через локальный proxy-слой.
         </p>
 
-        <div className={styles.cardPreview}>
-          <div className={styles.previewBlock}>
-            <span className={styles.previewLabel}>Что уже внутри</span>
-            <ul className={styles.previewList}>
-              <li>глобальный стор с несколькими чатами</li>
-              <li>роутинг по диалогам и localStorage</li>
-              <li>markdown и streaming-ответы GigaChat</li>
-            </ul>
-          </div>
-          <div className={styles.previewGrid}>
-            <div />
-            <div />
-            <div />
-          </div>
-        </div>
       </section>
 
       <section className={styles.panel}>
