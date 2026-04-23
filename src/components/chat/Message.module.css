@@ -90,44 +90,36 @@
 }
 
 .copy {
-  position: absolute;
-  top: -0.25rem;
-  right: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
+  display: inline-grid;
+  place-items: center;
+  align-self: flex-end;
+  width: 2.35rem;
+  height: 2.35rem;
   border: 1px solid var(--color-border);
   border-radius: 999px;
   background: var(--color-surface);
-  padding: 0.35rem 0.65rem;
+  padding: 0;
   color: var(--color-text-muted);
-  font-size: 0.76rem;
-  opacity: 0;
-  transform: translateY(-4px);
   transition:
-    opacity 180ms ease,
-    transform 180ms ease,
     color 180ms ease,
     border-color 180ms ease,
-    background 180ms ease;
+    background 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
   touch-action: manipulation;
-}
-
-.assistant:hover .copy,
-.assistant:focus-within .copy,
-.copied {
-  opacity: 1;
-  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
 }
 
 .copy:hover {
   color: var(--color-text);
+  transform: translateY(-1px);
 }
 
 .copied {
   border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
   background: color-mix(in srgb, var(--color-accent-soft) 70%, var(--color-surface));
   color: var(--color-text);
+  box-shadow: var(--shadow-md);
 }
 
 .markdown {
@@ -188,15 +180,6 @@
   border-radius: 1rem;
   background: transparent;
   padding: 0;
-}
-
-@media (hover: none) {
-  .copy {
-    position: static;
-    width: max-content;
-    opacity: 1;
-    transform: none;
-  }
 }
 
 @media (max-width: 640px) {

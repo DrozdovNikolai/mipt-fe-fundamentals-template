@@ -92,17 +92,6 @@ export function Message({ message, variant }: MessageProps) {
       {isAssistant ? <div className={styles.avatar}>G</div> : null}
 
       <div className={styles.body}>
-        {isAssistant ? (
-          <button
-            className={[styles.copy, copied ? styles.copied : ""].filter(Boolean).join(" ")}
-            onClick={handleCopy}
-            type="button"
-          >
-            <Icon name="copy" size={14} />
-            {copied ? "Скопировано" : "Копировать"}
-          </button>
-        ) : null}
-
         <div className={styles.meta}>
           <span>{message.author}</span>
           {message.timestamp ? (
@@ -152,6 +141,18 @@ export function Message({ message, variant }: MessageProps) {
             </ReactMarkdown>
           </div>
         </div>
+
+        {isAssistant ? (
+          <button
+            aria-label={copied ? "Скопировано" : "Копировать сообщение"}
+            className={[styles.copy, copied ? styles.copied : ""].filter(Boolean).join(" ")}
+            onClick={handleCopy}
+            title={copied ? "Скопировано" : "Копировать сообщение"}
+            type="button"
+          >
+            <Icon name={copied ? "check" : "copy"} size={16} />
+          </button>
+        ) : null}
       </div>
     </article>
   );
