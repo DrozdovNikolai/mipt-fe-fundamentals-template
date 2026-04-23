@@ -1,9 +1,11 @@
 .window {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  min-height: 100dvh;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  height: 100%;
+  min-height: 0;
   gap: 1rem;
   padding: 1.25rem;
+  overflow: hidden;
 }
 
 .header {
@@ -38,6 +40,7 @@
 }
 
 .content {
+  display: flex;
   min-height: 0;
   border: 1px solid var(--color-border);
   border-radius: 1.75rem;
@@ -45,6 +48,11 @@
     linear-gradient(180deg, color-mix(in srgb, var(--color-panel) 86%, white), var(--color-surface));
   box-shadow: var(--shadow-md);
   overflow: hidden;
+}
+
+.content > * {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .burger {

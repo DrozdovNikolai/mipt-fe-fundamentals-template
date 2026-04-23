@@ -1,7 +1,9 @@
 .layout {
   display: grid;
   grid-template-columns: minmax(18rem, var(--sidebar-width)) minmax(0, 1fr);
+  height: 100dvh;
   min-height: 100dvh;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -16,8 +18,11 @@
 }
 
 .main {
+  height: 100dvh;
   min-width: 0;
+  min-height: 0;
   background: transparent;
+  overflow: hidden;
 }
 
 .backdrop {
