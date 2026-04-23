@@ -1,3 +1,8 @@
+import type { IncomingHttpHeaders, IncomingMessage } from "node:http";
+import https from "node:https";
+import { Readable } from "node:stream";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
+
 type ChatRequestMessage = {
   role?: "user" | "assistant" | "system";
   content?: string;
@@ -25,9 +30,26 @@ type GigaChatTokenResponse = {
   access_token?: string;
 };
 
+type ExternalRequestOptions = {
+  method: string;
+  headers?: Record<string, string>;
+  body?: string;
+};
+
+type ProxyRequestOptions = {
+  method: string;
+  headers?: Record<string, string>;
+  body?: string;
+  bodyStream?: Readable;
+  defaultContentType: string;
+  includeCacheControl?: boolean;
+};
+
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
 };
+
+const useStrictSsl = process.env.GIGACHAT_VERIFY_SSL === "1";
 
 const jsonError = (message: string, status = 500) =>
   Response.json(
@@ -48,35 +70,111 @@ const readJson = async <T>(request: Request) => {
   }
 };
 
-const extractErrorMessage = async (response: Response) => {
-  try {
-    const payload = (await response.json()) as { error?: string; message?: string };
-    return payload.error ?? payload.message ?? `HTTP error ${response.status}`;
-  } catch {
-    const fallbackText = await response.text();
-    return fallbackText || `HTTP error ${response.status}`;
-  }
+const getHeaderValue = (headers: IncomingHttpHeaders, name: string) => {
+  const headerValue = headers[name.toLowerCase()];
+
+  return Array.isArray(headerValue) ? headerValue[0] : headerValue;
 };
 
 const buildProxyHeaders = (
-  upstreamHeaders: Headers,
+  upstreamHeaders: IncomingHttpHeaders,
   options: {
     defaultContentType: string;
     includeCacheControl?: boolean;
   },
 ) => {
   const headers = new Headers();
-  headers.set("Content-Type", upstreamHeaders.get("content-type") ?? options.defaultContentType);
+  headers.set("Content-Type", getHeaderValue(upstreamHeaders, "content-type") ?? options.defaultContentType);
 
   if (options.includeCacheControl) {
-    headers.set("Cache-Control", upstreamHeaders.get("cache-control") ?? "no-cache, no-transform");
+    headers.set("Cache-Control", getHeaderValue(upstreamHeaders, "cache-control") ?? "no-cache, no-transform");
   }
 
   return headers;
 };
 
+const readExternalResponse = (url: URL, options: ExternalRequestOptions) =>
+  new Promise<{
+    body: string;
+    headers: IncomingHttpHeaders;
+    statusCode: number;
+  }>((resolve, reject) => {
+    const request = https.request(
+      {
+        method: options.method,
+        hostname: url.hostname,
+        port: url.port,
+        path: `${url.pathname}${url.search}`,
+        headers: options.headers,
+        rejectUnauthorized: useStrictSsl,
+      },
+      (response: IncomingMessage) => {
+        const chunks: Buffer[] = [];
+
+        response.on("data", (chunk: Buffer | string) => {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        });
+
+        response.on("end", () => {
+          resolve({
+            body: Buffer.concat(chunks).toString("utf8"),
+            headers: response.headers,
+            statusCode: response.statusCode ?? 500,
+          });
+        });
+      },
+    );
+
+    request.on("error", reject);
+
+    if (options.body) {
+      request.write(options.body);
+    }
+
+    request.end();
+  });
+
+const proxyExternalResponse = (url: URL, options: ProxyRequestOptions) =>
+  new Promise<Response>((resolve, reject) => {
+    const upstreamRequest = https.request(
+      {
+        method: options.method,
+        hostname: url.hostname,
+        port: url.port,
+        path: `${url.pathname}${url.search}`,
+        headers: options.headers,
+        rejectUnauthorized: useStrictSsl,
+      },
+      (upstreamResponse: IncomingMessage) => {
+        resolve(
+          new Response(Readable.toWeb(upstreamResponse) as ReadableStream, {
+            status: upstreamResponse.statusCode ?? 500,
+            headers: buildProxyHeaders(upstreamResponse.headers, {
+              defaultContentType: options.defaultContentType,
+              includeCacheControl: options.includeCacheControl,
+            }),
+          }),
+        );
+      },
+    );
+
+    upstreamRequest.on("error", reject);
+
+    if (options.bodyStream) {
+      options.bodyStream.on("error", reject);
+      options.bodyStream.pipe(upstreamRequest);
+      return;
+    }
+
+    if (options.body) {
+      upstreamRequest.write(options.body);
+    }
+
+    upstreamRequest.end();
+  });
+
 const requestAccessToken = async (credentials: string, scope: string) => {
-  const response = await fetch("https://ngw.devices.sberbank.ru:9443/api/v2/oauth", {
+  const response = await readExternalResponse(new URL("https://ngw.devices.sberbank.ru:9443/api/v2/oauth"), {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -89,11 +187,11 @@ const requestAccessToken = async (credentials: string, scope: string) => {
     }).toString(),
   });
 
-  if (!response.ok) {
-    throw new Error(await extractErrorMessage(response));
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(response.body || "Не удалось получить access token GigaChat.");
   }
 
-  const payload = (await response.json()) as GigaChatTokenResponse;
+  const payload = JSON.parse(response.body) as GigaChatTokenResponse;
   if (!payload.access_token) {
     throw new Error("GigaChat не вернул access_token.");
   }
@@ -110,7 +208,8 @@ export const proxyChatCompletion = async (request: Request) => {
     }
 
     const accessToken = await requestAccessToken(body.credentials, body.scope);
-    const upstreamResponse = await fetch("https://gigachat.devices.sberbank.ru/api/v1/chat/completions", {
+
+    return proxyExternalResponse(new URL("https://gigachat.devices.sberbank.ru/api/v1/chat/completions"), {
       method: "POST",
       headers: {
         Accept: body.stream ? "text/event-stream" : "application/json",
@@ -126,14 +225,8 @@ export const proxyChatCompletion = async (request: Request) => {
         stream: Boolean(body.stream),
         messages: body.messages ?? [],
       }),
-    });
-
-    return new Response(upstreamResponse.body, {
-      status: upstreamResponse.status,
-      headers: buildProxyHeaders(upstreamResponse.headers, {
-        defaultContentType: body.stream ? "text/event-stream; charset=utf-8" : "application/json; charset=utf-8",
-        includeCacheControl: Boolean(body.stream),
-      }),
+      defaultContentType: body.stream ? "text/event-stream; charset=utf-8" : "application/json; charset=utf-8",
+      includeCacheControl: Boolean(body.stream),
     });
   } catch (error) {
     return jsonError(
@@ -151,7 +244,7 @@ export const proxyModelsRequest = async (request: Request) => {
     }
 
     const accessToken = await requestAccessToken(body.credentials, body.scope);
-    const upstreamResponse = await fetch("https://gigachat.devices.sberbank.ru/api/v1/models", {
+    const upstreamResponse = await readExternalResponse(new URL("https://gigachat.devices.sberbank.ru/api/v1/models"), {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -160,7 +253,7 @@ export const proxyModelsRequest = async (request: Request) => {
     });
 
     return new Response(upstreamResponse.body, {
-      status: upstreamResponse.status,
+      status: upstreamResponse.statusCode,
       headers: buildProxyHeaders(upstreamResponse.headers, {
         defaultContentType: "application/json; charset=utf-8",
       }),
@@ -186,7 +279,8 @@ export const proxyFileUpload = async (request: Request) => {
     }
 
     const accessToken = await requestAccessToken(credentials, scope);
-    const upstreamResponse = await fetch("https://gigachat.devices.sberbank.ru/api/v1/files", {
+
+    return proxyExternalResponse(new URL("https://gigachat.devices.sberbank.ru/api/v1/files"), {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -198,15 +292,8 @@ export const proxyFileUpload = async (request: Request) => {
             }
           : {}),
       },
-      body: request.body,
-      duplex: "half",
-    } as RequestInit & { duplex: "half" });
-
-    return new Response(upstreamResponse.body, {
-      status: upstreamResponse.status,
-      headers: buildProxyHeaders(upstreamResponse.headers, {
-        defaultContentType: "application/json; charset=utf-8",
-      }),
+      bodyStream: Readable.fromWeb(request.body as unknown as NodeReadableStream),
+      defaultContentType: "application/json; charset=utf-8",
     });
   } catch (error) {
     return jsonError(
