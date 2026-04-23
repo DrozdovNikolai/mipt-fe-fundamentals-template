@@ -8,9 +8,10 @@ Frontend-клиент чата на React + TypeScript + Vite. Приложен�
 
 Скриншоты или видео-запись работы:
 
-- `docs/demo-auth.png` — экран fallback-авторизации;
-- `docs/demo-chat.png` — основной экран чата;
-- `docs/demo-mobile.png` — мобильный вид интерфейса
+[экран fallback-авторизации](docs/demo-auth.png);
+[основной экран чата](docs/demo-chat.png);
+[мобильный вид интерфейса](docs/demo-chat.png);
+[во время генерации](docs/demo-generation.png);
 
 ## Стек
 
