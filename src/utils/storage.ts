@@ -53,6 +53,7 @@ const isChatData = (value: unknown): value is ChatData =>
 const isSettingsData = (value: unknown): value is SettingsData =>
   isRecord(value) &&
   typeof value.model === "string" &&
+  (value.samplingMode === "temperature" || value.samplingMode === "topP" || value.samplingMode === undefined) &&
   typeof value.temperature === "number" &&
   typeof value.topP === "number" &&
   typeof value.maxTokens === "number" &&
@@ -82,6 +83,10 @@ export const loadPersistedChatState = (): PersistedChatState | null => {
     const settings = isSettingsData(parsed.settings)
       ? {
           ...parsed.settings,
+          samplingMode:
+            parsed.settings.samplingMode === "temperature" || parsed.settings.samplingMode === "topP"
+              ? parsed.settings.samplingMode
+              : defaultSettings.samplingMode,
           repetitionPenalty:
             typeof parsed.settings.repetitionPenalty === "number"
               ? parsed.settings.repetitionPenalty

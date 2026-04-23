@@ -1,5 +1,6 @@
 export type MessageVariant = "user" | "assistant";
 export type ThemeMode = "light" | "dark";
+export type SamplingMode = "temperature" | "topP";
 export type ScopeOption =
   | "GIGACHAT_API_PERS"
   | "GIGACHAT_API_B2B"
@@ -34,6 +35,7 @@ export interface ChatData {
 
 export interface SettingsData {
   model: ModelOption;
+  samplingMode: SamplingMode;
   temperature: number;
   topP: number;
   maxTokens: number;

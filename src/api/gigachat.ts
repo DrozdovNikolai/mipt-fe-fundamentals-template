@@ -63,8 +63,8 @@ const createRequestBody = ({ authSession, settings, messages, stream }: ChatComp
   credentials: authSession.credentials,
   scope: authSession.scope,
   model: settings.model,
-  temperature: settings.temperature,
-  top_p: settings.topP,
+  temperature: settings.samplingMode === "temperature" ? settings.temperature : undefined,
+  top_p: settings.samplingMode === "topP" ? settings.topP : undefined,
   max_tokens: settings.maxTokens,
   repetition_penalty: settings.repetitionPenalty,
   messages,
@@ -86,7 +86,11 @@ const parseModelIds = (payload: unknown) => {
         return item;
       }
 
-      if (isRecord(item) && typeof item.id === "string") {
+      if (
+        isRecord(item) &&
+        typeof item.id === "string" &&
+        (item.type === undefined || item.type === "chat")
+      ) {
         return item.id;
       }
 
