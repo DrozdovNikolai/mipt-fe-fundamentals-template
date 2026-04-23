@@ -10,6 +10,14 @@ import type {
 
 const CHAT_STATE_STORAGE_KEY = "gigachat-ui:chat-state";
 const AUTH_SESSION_STORAGE_KEY = "gigachat-ui:auth-session";
+const LEGACY_SEED_CHAT_IDS = new Set([
+  "chat-001",
+  "chat-002",
+  "chat-003",
+  "chat-004",
+  "chat-005",
+  "chat-006",
+]);
 
 type PersistedChatState = Pick<ChatState, "activeChatId" | "chats" | "settings">;
 
@@ -55,6 +63,9 @@ const isSettingsData = (value: unknown): value is SettingsData =>
 const isAuthSession = (value: unknown): value is AuthSession =>
   isRecord(value) && typeof value.credentials === "string" && typeof value.scope === "string";
 
+const removeLegacySeedChats = (chats: ChatData[]) =>
+  chats.filter((chat) => !LEGACY_SEED_CHAT_IDS.has(chat.id));
+
 export const loadPersistedChatState = (): PersistedChatState | null => {
   if (!canUseStorage()) {
     return null;
@@ -67,7 +78,7 @@ export const loadPersistedChatState = (): PersistedChatState | null => {
     }
 
     const parsed = JSON.parse(rawValue) as Partial<PersistedChatState>;
-    const chats = Array.isArray(parsed.chats) ? parsed.chats.filter(isChatData) : null;
+    const chats = Array.isArray(parsed.chats) ? removeLegacySeedChats(parsed.chats.filter(isChatData)) : null;
     const settings = isSettingsData(parsed.settings)
       ? {
           ...parsed.settings,

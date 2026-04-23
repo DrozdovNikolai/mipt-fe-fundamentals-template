@@ -106,4 +106,30 @@ describe("storage", () => {
     expect(() => loadPersistedChatState()).not.toThrow();
     expect(loadPersistedChatState()).toBeNull();
   });
+
+  it("filters legacy seeded chats from persisted state", () => {
+    installLocalStorageMock(
+      createStorageMock({
+        [STORAGE_KEY]: JSON.stringify({
+          chats: [
+            {
+              id: "chat-001",
+              title: "Legacy demo chat",
+              updatedAt: "Сейчас",
+              preview: "Demo",
+              messages: [],
+            },
+            chat,
+          ],
+          activeChatId: "chat-1",
+          settings: defaultSettings,
+        }),
+      }),
+    );
+
+    const state = loadPersistedChatState();
+
+    expect(state?.chats).toHaveLength(1);
+    expect(state?.chats[0].id).toBe("chat-1");
+  });
 });

@@ -11,7 +11,7 @@ import {
 } from "react";
 import { requestAssistantCompletion, uploadAttachment, type GigaChatMessage } from "../../api/gigachat";
 import { configuredAuthSession } from "../../config/env";
-import { defaultSettings, mockChats } from "../../data/mockData";
+import { defaultSettings } from "../../data/mockData";
 import {
   loadAuthSession,
   loadPersistedChatState,
@@ -161,7 +161,7 @@ const normalizeChats = (chats: ChatData[]) => {
   return normalizedChats.map((chat) => syncChatDerivedFields(chat, normalizedChats));
 };
 
-const buildInitialChats = () => normalizeChats(mockChats);
+const buildInitialChats = () => normalizeChats([]);
 
 const buildNewChat = (chats: ChatData[]): ChatData => {
   const title = buildFallbackTitle(chats);
