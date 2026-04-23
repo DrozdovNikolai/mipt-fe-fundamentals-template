@@ -527,13 +527,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (error) {
-      dispatch({
-        type: "REMOVE_MESSAGE",
-        payload: {
-          chatId,
-          messageId: assistantMessage.id,
-        },
-      });
+      if (!hasStreamedContent) {
+        dispatch({
+          type: "REMOVE_MESSAGE",
+          payload: {
+            chatId,
+            messageId: assistantMessage.id,
+          },
+        });
+      }
 
       if (isAbortError(error)) {
         return;
