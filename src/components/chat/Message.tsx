@@ -113,6 +113,17 @@ export function Message({ message, variant }: MessageProps) {
         </div>
 
         <div className={styles.bubble}>
+          {message.attachments?.length ? (
+            <div className={styles.attachments}>
+              {message.attachments.map((attachment) => (
+                <div className={styles.attachment} key={attachment.id}>
+                  <Icon name="image" size={16} />
+                  <span>{attachment.name}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           <div className={styles.markdown}>
             <ReactMarkdown
               components={{

@@ -8,6 +8,52 @@
   box-shadow: var(--shadow-sm);
 }
 
+.fileInput {
+  display: none;
+}
+
+.attachment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-surface) 82%, var(--color-accent-soft));
+  padding: 0.7rem 0.9rem;
+}
+
+.attachmentMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.attachmentName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachmentRemove {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  flex: 0 0 auto;
+}
+
+.attachmentRemove:hover {
+  color: var(--color-text);
+}
+
 .controls {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

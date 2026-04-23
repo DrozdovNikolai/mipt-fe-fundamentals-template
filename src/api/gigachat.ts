@@ -5,6 +5,7 @@ export type GigaChatRole = "system" | "user" | "assistant";
 export interface GigaChatMessage {
   role: GigaChatRole;
   content: string;
+  attachments?: string[];
 }
 
 interface ChatCompletionOptions {
@@ -26,7 +27,19 @@ type StreamChunk = {
   }>;
 };
 
+type UploadedFileResponse = {
+  id?: string;
+  filename?: string;
+  mime_type?: string;
+  mimeType?: string;
+};
+
 const API_URL = "/api/gigachat/chat/completions";
+const MODELS_API_URL = "/api/gigachat/models";
+const FILES_API_URL = "/api/gigachat/files";
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
 
 const isAbortError = (error: unknown) =>
   error instanceof DOMException
@@ -53,9 +66,107 @@ const createRequestBody = ({ authSession, settings, messages, stream }: ChatComp
   temperature: settings.temperature,
   top_p: settings.topP,
   max_tokens: settings.maxTokens,
+  repetition_penalty: settings.repetitionPenalty,
   messages,
   stream,
 });
+
+const parseModelIds = (payload: unknown) => {
+  const items = Array.isArray(payload)
+    ? payload
+    : isRecord(payload) && Array.isArray(payload.data)
+      ? payload.data
+      : isRecord(payload) && Array.isArray(payload.models)
+        ? payload.models
+        : [];
+
+  const ids = items
+    .map((item) => {
+      if (typeof item === "string") {
+        return item;
+      }
+
+      if (isRecord(item) && typeof item.id === "string") {
+        return item.id;
+      }
+
+      return null;
+    })
+    .filter((value): value is string => Boolean(value));
+
+  return [...new Set(ids)];
+};
+
+const parseUploadedFile = (payload: unknown, fallbackName: string, fallbackMimeType: string) => {
+  const source = isRecord(payload) && isRecord(payload.data) ? payload.data : payload;
+
+  if (!isRecord(source) || typeof source.id !== "string") {
+    throw new Error("GigaChat не вернул идентификатор загруженного файла.");
+  }
+
+  return {
+    id: source.id,
+    name:
+      typeof source.filename === "string"
+        ? source.filename
+        : typeof source.name === "string"
+          ? source.name
+          : fallbackName,
+    mimeType:
+      typeof source.mime_type === "string"
+        ? source.mime_type
+        : typeof source.mimeType === "string"
+          ? source.mimeType
+          : fallbackMimeType,
+  };
+};
+
+export const fetchAvailableModels = async (authSession: AuthSession, signal?: AbortSignal) => {
+  const response = await fetch(MODELS_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(authSession),
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response));
+  }
+
+  const payload = (await response.json()) as unknown;
+  const modelIds = parseModelIds(payload);
+
+  if (!modelIds.length) {
+    throw new Error("GigaChat не вернул список моделей.");
+  }
+
+  return modelIds;
+};
+
+export const uploadAttachment = async (authSession: AuthSession, file: File, signal?: AbortSignal) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("purpose", "general");
+
+  const response = await fetch(FILES_API_URL, {
+    method: "POST",
+    headers: {
+      "X-GigaChat-Credentials": authSession.credentials,
+      "X-GigaChat-Scope": authSession.scope,
+    },
+    body: formData,
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response));
+  }
+
+  const payload = (await response.json()) as UploadedFileResponse | { data?: UploadedFileResponse };
+  return parseUploadedFile(payload, file.name, file.type || "image/*");
+};
 
 export const requestChatCompletion = async (options: ChatCompletionOptions) => {
   const response = await fetch(API_URL, {

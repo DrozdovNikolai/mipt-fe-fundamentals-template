@@ -17,6 +17,7 @@ export const defaultSettings: SettingsData = {
   temperature: 0.7,
   topP: 0.85,
   maxTokens: 2048,
+  repetitionPenalty: 1,
   systemPrompt:
     "You are a helpful assistant for a frontend developer. Answer clearly, structure UI suggestions, and keep examples concise.",
   theme: "light",

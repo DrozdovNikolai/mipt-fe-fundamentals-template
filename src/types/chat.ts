@@ -4,10 +4,14 @@ export type ScopeOption =
   | "GIGACHAT_API_PERS"
   | "GIGACHAT_API_B2B"
   | "GIGACHAT_API_CORP";
-export type ModelOption =
-  | "GigaChat-2"
-  | "GigaChat-2-Pro"
-  | "GigaChat-2-Max";
+export type ModelOption = string;
+
+export interface MessageAttachment {
+  id: string;
+  kind: "image";
+  name: string;
+  mimeType: string;
+}
 
 export interface MessageData {
   id: string;
@@ -16,6 +20,7 @@ export interface MessageData {
   author: string;
   createdAt: string;
   timestamp?: string;
+  attachments?: MessageAttachment[];
 }
 
 export interface ChatData {
@@ -32,6 +37,7 @@ export interface SettingsData {
   temperature: number;
   topP: number;
   maxTokens: number;
+  repetitionPenalty: number;
   systemPrompt: string;
   theme: ThemeMode;
 }

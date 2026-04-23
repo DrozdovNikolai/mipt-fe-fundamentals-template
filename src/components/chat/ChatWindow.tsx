@@ -28,8 +28,8 @@ export function ChatWindow({
   const title = activeChat?.title ?? "Новый диалог";
   const resetKey = activeChat?.id ?? "empty-chat";
 
-  const handleSubmitMessage = useCallback(async (content: string) => {
-    const chatId = await sendMessage(content);
+  const handleSubmitMessage = useCallback(async (content: string, attachments?: File[]) => {
+    const chatId = await sendMessage(content, attachments);
 
     if (chatId && location.pathname !== `/chat/${chatId}`) {
       navigate(`/chat/${chatId}`);

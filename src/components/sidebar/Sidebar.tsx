@@ -26,12 +26,17 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           return true;
         }
 
-        const lastMessageContent = collapseWhitespace(chat.messages[chat.messages.length - 1]?.content ?? "")
+        const historyText = chat.messages
+          .flatMap((message) => [
+            collapseWhitespace(message.content),
+            ...(message.attachments?.map((attachment) => attachment.name) ?? []),
+          ])
+          .join(" ")
           .toLowerCase();
 
         return (
           chat.title.toLowerCase().includes(deferredSearchValue) ||
-          lastMessageContent.includes(deferredSearchValue)
+          historyText.includes(deferredSearchValue)
         );
       }),
     [deferredSearchValue, state.chats],

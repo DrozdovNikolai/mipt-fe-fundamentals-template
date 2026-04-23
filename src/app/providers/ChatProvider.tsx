@@ -9,7 +9,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { requestAssistantCompletion, type GigaChatMessage } from "../../api/gigachat";
+import { requestAssistantCompletion, uploadAttachment, type GigaChatMessage } from "../../api/gigachat";
 import { configuredAuthSession } from "../../config/env";
 import { defaultSettings, mockChats } from "../../data/mockData";
 import {
@@ -23,6 +23,7 @@ import type {
   ChatAction,
   ChatData,
   ChatState,
+  MessageAttachment,
   MessageData,
   MessageVariant,
   SettingsData,
@@ -38,7 +39,7 @@ interface ChatContextValue {
   createChat: () => string;
   renameChat: (chatId: string, title: string) => void;
   deleteChat: (chatId: string) => void;
-  sendMessage: (content: string) => Promise<string | null>;
+  sendMessage: (content: string, attachments?: File[]) => Promise<string | null>;
   reloadLastResponse: () => Promise<void>;
   stopGeneration: () => void;
 }
@@ -69,13 +70,19 @@ const formatMessageTime = (timestamp: string) =>
 
 const resolveAuthor = (role: MessageVariant) => (role === "assistant" ? "GigaChat" : "Вы");
 
-const buildMessage = (role: MessageVariant, content: string, timestamp = new Date().toISOString()): MessageData => ({
+const buildMessage = (
+  role: MessageVariant,
+  content: string,
+  timestamp = new Date().toISOString(),
+  attachments?: MessageAttachment[],
+): MessageData => ({
   id: generateId(),
   role,
   content,
   author: resolveAuthor(role),
   createdAt: formatMessageTime(timestamp),
   timestamp,
+  attachments,
 });
 
 const buildPreview = (messages: MessageData[]) => {
@@ -146,6 +153,7 @@ const normalizeChats = (chats: ChatData[]) => {
         timestamp,
         author: message.author || resolveAuthor(message.role),
         createdAt: message.createdAt || formatMessageTime(timestamp),
+        attachments: message.attachments?.filter((attachment) => attachment.kind === "image"),
       };
     }),
   }));
@@ -346,6 +354,7 @@ const buildApiMessages = (messages: MessageData[], systemPrompt: string) => {
     requestMessages.push({
       role: message.role,
       content: message.content,
+      attachments: message.attachments?.map((attachment) => attachment.id),
     });
   }
 
@@ -546,8 +555,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [state.authSession, state.settings]);
 
-  const sendMessage = useCallback(async (content: string) => {
-    if (!collapseWhitespace(content) || state.isLoading) {
+  const sendMessage = useCallback(async (content: string, attachments: File[] = []) => {
+    const normalizedContent = collapseWhitespace(content);
+    const hasAttachments = attachments.length > 0;
+
+    if ((!normalizedContent && !hasAttachments) || state.isLoading) {
       return state.activeChatId;
     }
 
@@ -563,7 +575,54 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    const userMessage = buildMessage("user", content);
+    const authSession = state.authSession;
+    let uploadedAttachments: MessageAttachment[] = [];
+
+    if (hasAttachments) {
+      if (!authSession) {
+        dispatch({
+          type: "SET_ERROR",
+          payload: "Сначала задайте credentials через переменные окружения или форму входа.",
+        });
+        return chatId;
+      }
+
+      dispatch({
+        type: "SET_LOADING",
+        payload: true,
+      });
+      dispatch({
+        type: "SET_ERROR",
+        payload: null,
+      });
+
+      try {
+        uploadedAttachments = await Promise.all(
+          attachments.map(async (file) => {
+            const uploadedFile = await uploadAttachment(authSession, file);
+            return {
+              id: uploadedFile.id,
+              kind: "image" as const,
+              name: uploadedFile.name,
+              mimeType: uploadedFile.mimeType,
+            };
+          }),
+        );
+      } catch (error) {
+        dispatch({
+          type: "SET_LOADING",
+          payload: false,
+        });
+        dispatch({
+          type: "SET_ERROR",
+          payload: error instanceof Error ? error.message : "Не удалось загрузить изображение в GigaChat.",
+        });
+        return chatId;
+      }
+    }
+
+    const messageContent = normalizedContent || (uploadedAttachments.length ? "Опиши это изображение." : content);
+    const userMessage = buildMessage("user", messageContent, undefined, uploadedAttachments);
 
     dispatch({
       type: "APPEND_MESSAGE",
@@ -577,7 +636,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     await runAssistantRequest(chatId, requestMessages);
 
     return chatId;
-  }, [runAssistantRequest, state.activeChatId, state.chats, state.isLoading, state.settings.systemPrompt]);
+  }, [runAssistantRequest, state.activeChatId, state.authSession, state.chats, state.isLoading, state.settings.systemPrompt]);
 
   const reloadLastResponse = useCallback(async () => {
     if (!lastRequestRef.current || state.isLoading) {

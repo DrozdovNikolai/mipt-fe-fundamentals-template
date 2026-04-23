@@ -7,6 +7,7 @@ import react from "@vitejs/plugin-react";
 type ChatRequestMessage = {
   role?: "user" | "assistant" | "system";
   content?: string;
+  attachments?: string[];
 };
 
 type GigaChatProxyRequest = {
@@ -16,6 +17,7 @@ type GigaChatProxyRequest = {
   temperature?: number;
   top_p?: number;
   max_tokens?: number;
+  repetition_penalty?: number;
   stream?: boolean;
   messages?: ChatRequestMessage[];
 };
@@ -25,11 +27,16 @@ type StreamingRequestBody = {
   prompt?: string;
 };
 
+type GigaChatAuthRequest = {
+  credentials?: string;
+  scope?: string;
+};
+
 type GigaChatTokenResponse = {
   access_token?: string;
 };
 
-const readRequestBody = async (request: IncomingMessage) => {
+const readRequestBody = async <T>(request: IncomingMessage) => {
   const chunks: Buffer[] = [];
 
   for await (const chunk of request) {
@@ -37,17 +44,36 @@ const readRequestBody = async (request: IncomingMessage) => {
   }
 
   if (!chunks.length) {
-    return {};
+    return {} as T;
   }
 
-  return JSON.parse(Buffer.concat(chunks).toString("utf8")) as {
-    messages?: ChatRequestMessage[];
-    prompt?: string;
-  };
+  return JSON.parse(Buffer.concat(chunks).toString("utf8")) as T;
 };
 
 const collapseWhitespace = (value: string) => value.replace(/\s+/g, " ").trim();
 const useStrictSsl = process.env.GIGACHAT_VERIFY_SSL === "1";
+
+const getHeaderValue = (headers: IncomingMessage["headers"], name: string) => {
+  const headerValue = headers[name.toLowerCase()];
+
+  return Array.isArray(headerValue) ? headerValue[0] : headerValue;
+};
+
+const endResponseSafely = (response: ServerResponse, statusCode?: number, payload?: unknown) => {
+  if (response.writableEnded || response.destroyed) {
+    return;
+  }
+
+  if (payload !== undefined && !response.headersSent) {
+    response.writeHead(statusCode ?? 500, {
+      "Content-Type": "application/json; charset=utf-8",
+    });
+    response.end(JSON.stringify(payload));
+    return;
+  }
+
+  response.end();
+};
 
 const buildReply = (messages: ChatRequestMessage[] = []) => {
   const lastUserMessage = [...messages].reverse().find((message) => message.role === "user");
@@ -199,6 +225,7 @@ const proxyChatCompletion = async (
     temperature: body.temperature,
     top_p: body.top_p,
     max_tokens: body.max_tokens,
+    repetition_penalty: body.repetition_penalty,
     stream: Boolean(body.stream),
     messages: body.messages ?? [],
   });
@@ -238,12 +265,7 @@ const proxyChatCompletion = async (
       });
 
       upstreamResponse.on("error", (error) => {
-        if (!response.writableEnded) {
-          response.writeHead(500, {
-            "Content-Type": "application/json; charset=utf-8",
-          });
-          response.end(JSON.stringify({ error: error.message }));
-        }
+        endResponseSafely(response, 500, { error: error.message });
       });
     },
   );
@@ -252,26 +274,114 @@ const proxyChatCompletion = async (
     upstreamRequest.destroy();
   };
 
-  request.on("close", cleanup);
+  request.on("aborted", cleanup);
   response.on("close", cleanup);
 
   upstreamRequest.on("error", (error) => {
-    if (response.writableEnded) {
-      return;
-    }
-
-    response.writeHead(500, {
-      "Content-Type": "application/json; charset=utf-8",
+    endResponseSafely(response, 500, {
+      error: `Ошибка запроса к GigaChat API: ${error.message}`,
     });
-    response.end(
-      JSON.stringify({
-        error: `Ошибка запроса к GigaChat API: ${error.message}`,
-      }),
-    );
   });
 
   upstreamRequest.write(upstreamBody);
   upstreamRequest.end();
+};
+
+const proxyModelsRequest = async (
+  response: ServerResponse,
+  body: GigaChatAuthRequest,
+) => {
+  if (!body.credentials || !body.scope) {
+    response.writeHead(400, {
+      "Content-Type": "application/json; charset=utf-8",
+    });
+    response.end(JSON.stringify({ error: "Не переданы credentials или scope." }));
+    return;
+  }
+
+  const accessToken = await requestAccessToken(body.credentials, body.scope);
+  const upstreamResponse = await readExternalResponse(new URL("https://gigachat.devices.sberbank.ru/api/v1/models"), {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  response.writeHead(upstreamResponse.statusCode, {
+    "Content-Type":
+      (Array.isArray(upstreamResponse.headers["content-type"])
+        ? upstreamResponse.headers["content-type"][0]
+        : upstreamResponse.headers["content-type"]) ?? "application/json; charset=utf-8",
+  });
+  response.end(upstreamResponse.body);
+};
+
+const proxyFileUpload = async (
+  request: IncomingMessage,
+  response: ServerResponse,
+) => {
+  const credentials = getHeaderValue(request.headers, "x-gigachat-credentials");
+  const scope = getHeaderValue(request.headers, "x-gigachat-scope");
+
+  if (!credentials || !scope) {
+    response.writeHead(400, {
+      "Content-Type": "application/json; charset=utf-8",
+    });
+    response.end(JSON.stringify({ error: "Не переданы credentials или scope." }));
+    return;
+  }
+
+  const accessToken = await requestAccessToken(credentials, scope);
+  const upstreamRequest = https.request(
+    {
+      method: "POST",
+      hostname: "gigachat.devices.sberbank.ru",
+      path: "/api/v1/files",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": getHeaderValue(request.headers, "content-type") ?? "multipart/form-data",
+        "Content-Length": getHeaderValue(request.headers, "content-length") ?? undefined,
+      },
+      rejectUnauthorized: useStrictSsl,
+    },
+    (upstreamResponse) => {
+      response.writeHead(upstreamResponse.statusCode ?? 500, {
+        "Content-Type":
+          (Array.isArray(upstreamResponse.headers["content-type"])
+            ? upstreamResponse.headers["content-type"][0]
+            : upstreamResponse.headers["content-type"]) ?? "application/json; charset=utf-8",
+      });
+
+      upstreamResponse.on("data", (chunk) => {
+        response.write(chunk);
+      });
+
+      upstreamResponse.on("end", () => {
+        response.end();
+      });
+
+      upstreamResponse.on("error", (error) => {
+        endResponseSafely(response, 500, { error: error.message });
+      });
+    },
+  );
+
+  const cleanup = () => {
+    upstreamRequest.destroy();
+  };
+
+  request.on("aborted", cleanup);
+  response.on("close", cleanup);
+
+  upstreamRequest.on("error", (error) => {
+    endResponseSafely(response, 500, {
+      error: `Ошибка загрузки файла в GigaChat API: ${error.message}`,
+    });
+  });
+
+  request.pipe(upstreamRequest);
 };
 
 type StreamOptions = {
@@ -343,13 +453,24 @@ const createStreamingApiMiddleware =
 
     try {
       if (request.method === "POST" && url.pathname === "/api/gigachat/chat/completions") {
-        const body = (await readRequestBody(request)) as GigaChatProxyRequest;
+        const body = await readRequestBody<GigaChatProxyRequest>(request);
         await proxyChatCompletion(request, response, body);
         return;
       }
 
+      if (request.method === "POST" && url.pathname === "/api/gigachat/models") {
+        const body = await readRequestBody<GigaChatAuthRequest>(request);
+        await proxyModelsRequest(response, body);
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/gigachat/files") {
+        await proxyFileUpload(request, response);
+        return;
+      }
+
       if (request.method === "POST" && url.pathname === "/api/chat") {
-        const body = await readRequestBody(request);
+        const body = await readRequestBody<StreamingRequestBody>(request);
         const replyChunks = chunkReply(buildReply(body.messages));
 
         streamResponse(request, response, replyChunks, {
@@ -363,7 +484,7 @@ const createStreamingApiMiddleware =
       if ((request.method === "GET" || request.method === "POST") && url.pathname === "/api/stream") {
         const body =
           request.method === "POST"
-            ? ((await readRequestBody(request)) as StreamingRequestBody)
+            ? await readRequestBody<StreamingRequestBody>(request)
             : undefined;
         const prompt = collapseWhitespace(body?.prompt ?? url.searchParams.get("prompt") ?? "");
         const replyChunks = chunkReply(buildStreamingReply(prompt, "stream"));

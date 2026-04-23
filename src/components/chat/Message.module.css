@@ -53,6 +53,33 @@
   box-shadow: var(--shadow-sm);
 }
 
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+}
+
+.attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent-soft) 78%, var(--color-surface));
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+.attachment span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .user .bubble {
   border-color: color-mix(in srgb, var(--color-accent) 24%, var(--color-border));
   background: linear-gradient(

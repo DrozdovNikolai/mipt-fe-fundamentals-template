@@ -1,6 +1,10 @@
+import { useEffect, useState } from "react";
+import { fetchAvailableModels } from "../../api/gigachat";
+import { useChatStore } from "../../app/providers/ChatProvider";
 import { modelOptions } from "../../data/mockData";
 import type { SettingsData, ThemeMode } from "../../types/chat";
 import { Button } from "../ui/Button";
+import { ErrorMessage } from "../ui/ErrorMessage";
 import { Icon } from "../ui/Icon";
 import { Slider } from "../ui/Slider";
 import { Toggle } from "../ui/Toggle";
@@ -23,6 +27,41 @@ export function SettingsPanel({
   onSave,
   onReset,
 }: SettingsPanelProps) {
+  const { state } = useChatStore();
+  const [availableModels, setAvailableModels] = useState(modelOptions);
+  const [modelsError, setModelsError] = useState("");
+  const modelChoices = Array.from(new Set([settings.model, ...availableModels]));
+
+  useEffect(() => {
+    if (!isOpen || !state.authSession) {
+      return;
+    }
+
+    const abortController = new AbortController();
+
+    fetchAvailableModels(state.authSession, abortController.signal)
+      .then((models) => {
+        setAvailableModels(models);
+        setModelsError("");
+      })
+      .catch((error) => {
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        setAvailableModels(modelOptions);
+        setModelsError(
+          error instanceof Error
+            ? `${error.message} Используем локальный fallback-список моделей.`
+            : "Не удалось загрузить список моделей. Используем fallback-список.",
+        );
+      });
+
+    return () => {
+      abortController.abort();
+    };
+  }, [isOpen, state.authSession]);
+
   if (!isOpen) {
     return null;
   }
@@ -63,13 +102,15 @@ export function SettingsPanel({
               onChange={(event) => update("model", event.currentTarget.value as SettingsData["model"])}
               value={settings.model}
             >
-              {modelOptions.map((option) => (
+              {modelChoices.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
               ))}
             </select>
           </label>
+
+          {modelsError ? <ErrorMessage message={modelsError} /> : null}
 
           <Slider
             id="temperature"
@@ -89,6 +130,16 @@ export function SettingsPanel({
             onChange={(value) => update("topP", value)}
             step={0.05}
             value={settings.topP}
+          />
+
+          <Slider
+            id="repetitionPenalty"
+            label="Repetition Penalty"
+            max={2}
+            min={0}
+            onChange={(value) => update("repetitionPenalty", value)}
+            step={0.05}
+            value={settings.repetitionPenalty}
           />
 
           <label className={styles.field}>
