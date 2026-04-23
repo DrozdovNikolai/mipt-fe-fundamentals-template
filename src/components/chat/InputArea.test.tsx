@@ -44,6 +44,25 @@ describe("InputArea", () => {
     expect(onSubmitMessage).toHaveBeenCalledWith("Отправь это");
   });
 
+  it("keeps newline on Shift+Enter and grows textarea until max height", async () => {
+    const user = userEvent.setup();
+    const { onSubmitMessage, textarea } = renderInputArea();
+
+    Object.defineProperty(textarea, "scrollHeight", {
+      configurable: true,
+      value: 240,
+    });
+
+    await user.type(textarea, "Первая строка{Shift>}{Enter}{/Shift}Вторая строка");
+
+    expect(onSubmitMessage).not.toHaveBeenCalled();
+    expect(textarea).toHaveValue("Первая строка\nВторая строка");
+    expect(textarea).toHaveStyle({
+      height: "176px",
+      overflowY: "auto",
+    });
+  });
+
   it("keeps Send button disabled for an empty or whitespace-only input", async () => {
     const user = userEvent.setup();
     const { submitButton, textarea } = renderInputArea();

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "../ui/Button";
 import { ErrorMessage } from "../ui/ErrorMessage";
 import { Icon } from "../ui/Icon";
@@ -13,6 +13,7 @@ interface InputAreaProps {
 }
 
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
+const MAX_TEXTAREA_HEIGHT = 176;
 
 export function InputArea({
   isLoading,
@@ -28,6 +29,22 @@ export function InputArea({
   const [attachmentError, setAttachmentError] = useState("");
   const trimmedValue = value.trim();
   const canSubmit = (trimmedValue.length > 0 || Boolean(selectedImage)) && !isLoading;
+
+  const syncTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = "0px";
+    const nextHeight = Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT);
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY = textarea.scrollHeight > MAX_TEXTAREA_HEIGHT ? "auto" : "hidden";
+  }, []);
+
+  useLayoutEffect(() => {
+    syncTextareaHeight();
+  }, [syncTextareaHeight, value]);
 
   useEffect(() => {
     if (isLoading) {
@@ -136,7 +153,9 @@ export function InputArea({
           className={styles.textarea}
           disabled={isLoading}
           enterKeyHint={isLoading ? "done" : "send"}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => {
+            setValue(event.target.value);
+          }}
           onKeyDown={(event) => {
             if (event.nativeEvent.isComposing) {
               return;
