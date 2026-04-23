@@ -4,11 +4,19 @@ import styles from "./ChatList.module.css";
 
 interface ChatListProps {
   chats: ChatData[];
-  activeChatId: string;
+  activeChatId: string | null;
+  onDeleteChat: (chatId: string) => void;
+  onRenameChat: (chatId: string, title: string) => void;
   onSelectChat: (chatId: string) => void;
 }
 
-export function ChatList({ chats, activeChatId, onSelectChat }: ChatListProps) {
+export function ChatList({
+  chats,
+  activeChatId,
+  onDeleteChat,
+  onRenameChat,
+  onSelectChat,
+}: ChatListProps) {
   if (!chats.length) {
     return (
       <div className={styles.empty}>
@@ -25,6 +33,8 @@ export function ChatList({ chats, activeChatId, onSelectChat }: ChatListProps) {
           active={chat.id === activeChatId}
           chat={chat}
           key={chat.id}
+          onDelete={onDeleteChat}
+          onRename={onRenameChat}
           onClick={() => onSelectChat(chat.id)}
         />
       ))}

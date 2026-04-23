@@ -35,29 +35,14 @@ export function AuthForm({ onSubmit }: AuthFormProps) {
       <section className={styles.hero}>
         <div className={styles.badge}>
           <Icon name="spark" size={18} />
-          React + TypeScript mock shell
+          React + TypeScript GigaChat client
         </div>
         <h1 className={styles.title}>Авторизация в учебное приложение GigaChat</h1>
         <p className={styles.subtitle}>
-          Экран показывает состояние до входа: базовая валидация, выбор scope и переход в
-          mock-интерфейс без реальных запросов.
+          Введите Base64 credentials и scope, чтобы подключить интерфейс к реальному GigaChat API
+          через локальный proxy-слой.
         </p>
 
-        <div className={styles.cardPreview}>
-          <div className={styles.previewBlock}>
-            <span className={styles.previewLabel}>Что уже внутри</span>
-            <ul className={styles.previewList}>
-              <li>sidebar с моковыми чатами</li>
-              <li>chat window с markdown-сообщениями</li>
-              <li>drawer настроек модели и темы</li>
-            </ul>
-          </div>
-          <div className={styles.previewGrid}>
-            <div />
-            <div />
-            <div />
-          </div>
-        </div>
       </section>
 
       <section className={styles.panel}>

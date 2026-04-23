@@ -1,0 +1,18 @@
+.fallback {
+  display: grid;
+  gap: 0.4rem;
+  place-items: center;
+  min-height: 12rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--color-panel) 94%, white);
+  color: var(--color-text-muted);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.title {
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 700;
+}

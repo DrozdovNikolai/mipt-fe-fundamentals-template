@@ -1,10 +1,68 @@
 .wrap {
+  width: 100%;
   margin: 0;
   border: 1px solid var(--color-border);
   border-radius: 1.5rem;
   background: color-mix(in srgb, var(--color-panel) 96%, white);
   padding: 0.9rem;
   box-shadow: var(--shadow-sm);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.wrap:focus-within {
+  border-color: color-mix(in srgb, var(--color-accent) 26%, var(--color-border));
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--color-accent-soft) 45%, transparent),
+    var(--shadow-md);
+}
+
+.fileInput {
+  display: none;
+}
+
+.attachment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-surface) 82%, var(--color-accent-soft));
+  padding: 0.7rem 0.9rem;
+}
+
+.attachmentMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.attachmentName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachmentRemove {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  flex: 0 0 auto;
+}
+
+.attachmentRemove:hover {
+  color: var(--color-text);
 }
 
 .controls {
@@ -24,6 +82,7 @@
   background: var(--color-surface);
   color: var(--color-text-muted);
   box-shadow: var(--shadow-sm);
+  touch-action: manipulation;
 }
 
 .iconButton:hover {
@@ -38,17 +97,36 @@
 .textarea {
   width: 100%;
   min-height: 2.75rem;
-  max-height: 9rem;
+  max-height: 11rem;
+  min-width: 0;
+  overflow-y: hidden;
   resize: none;
   border: 0;
   background: transparent;
   color: var(--color-text);
   line-height: 1.55;
   outline: none;
+  padding: 0.1rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-text-muted) 55%, transparent) transparent;
 }
 
 .textarea::placeholder {
   color: var(--color-text-muted);
+}
+
+.textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.textarea::-webkit-scrollbar {
+  width: 0.45rem;
+}
+
+.textarea::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-muted) 42%, transparent);
 }
 
 .actions {
@@ -56,19 +134,28 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.6rem;
+  min-width: 0;
+}
+
+.actions > * {
+  min-width: 0;
 }
 
 @media (max-width: 700px) {
   .controls {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .iconButton {
+    display: none;
   }
 
   .actions {
-    grid-column: 1 / -1;
+    grid-column: auto;
     justify-content: stretch;
   }
 
   .actions > * {
-    flex: 1;
+    flex: 1 1 100%;
   }
 }

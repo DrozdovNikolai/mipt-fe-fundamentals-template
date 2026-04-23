@@ -6,6 +6,8 @@
   border: 1px solid transparent;
   border-radius: 999px;
   font-weight: 700;
+  min-width: 0;
+  touch-action: manipulation;
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,

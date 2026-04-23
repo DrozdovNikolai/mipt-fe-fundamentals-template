@@ -7,6 +7,10 @@
   padding: 1.25rem;
 }
 
+.scrollAnchor {
+  min-height: 1px;
+}
+
 @media (max-width: 640px) {
   .list {
     padding: 0.9rem;

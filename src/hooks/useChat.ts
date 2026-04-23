@@ -3,9 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
-  type ChangeEvent,
   type Dispatch,
-  type InputEvent,
   type SetStateAction,
 } from "react";
 
@@ -27,13 +25,9 @@ export type UseChatOptions = {
 
 export type UseChatResult = {
   messages: Message[];
-  input: string;
-  handleInputChange: (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => void;
-  handleSubmit: (event: InputEvent<HTMLFormElement>) => Promise<void>;
   isLoading: boolean;
   error: Error | null;
+  submitMessage: (content: string) => Promise<void>;
   stop: () => void;
   reload: () => Promise<void>;
   setMessages: Dispatch<SetStateAction<Message[]>>;
@@ -69,7 +63,6 @@ const normalizeError = (error: unknown) =>
 
 export function useChat(options: UseChatOptions = {}): UseChatResult {
   const [messages, setMessages] = useState<Message[]>(() => options.initialMessages ?? []);
-  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -81,12 +74,6 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
       abortControllerRef.current?.abort();
     };
   }, []);
-
-  const handleInputChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    setInput(event.target.value);
-  };
 
   const handleStream = async (response: Response) => {
     const reader = response.body?.getReader();
@@ -233,17 +220,15 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
     }
   };
 
-  const handleSubmit = async (event: InputEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!input.trim() || isLoading) {
+  const submitMessage = async (content: string) => {
+    if (!content.trim() || isLoading) {
       return;
     }
 
     const userMessage: Message = {
       id: generateId(),
       role: "user",
-      content: input,
+      content,
       createdAt: new Date(),
     };
 
@@ -251,7 +236,6 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
 
     lastRequestMessagesRef.current = requestMessages;
     setMessages((currentMessages) => [...currentMessages, userMessage]);
-    setInput("");
 
     await sendMessages(requestMessages);
   };
@@ -275,11 +259,9 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
 
   return {
     messages,
-    input,
-    handleInputChange,
-    handleSubmit,
     isLoading,
     error,
+    submitMessage,
     stop,
     reload,
     setMessages,

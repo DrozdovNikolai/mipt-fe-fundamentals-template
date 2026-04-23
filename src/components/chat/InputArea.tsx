@@ -1,58 +1,161 @@
-import { useEffect, useRef, type ChangeEvent, type FormEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "../ui/Button";
+import { ErrorMessage } from "../ui/ErrorMessage";
 import { Icon } from "../ui/Icon";
 import styles from "./InputArea.module.css";
 
 interface InputAreaProps {
-  value: string;
   isLoading: boolean;
   hasError: boolean;
-  onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
+  onSubmitMessage: (content: string, attachments?: File[]) => void | Promise<void>;
   onStop: () => void;
   onReload: () => void | Promise<void>;
 }
 
+const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
+const MAX_TEXTAREA_HEIGHT = 176;
+
 export function InputArea({
-  value,
   isLoading,
   hasError,
-  onChange,
-  onSubmit,
+  onSubmitMessage,
   onStop,
   onReload,
 }: InputAreaProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const canSubmit = value.trim().length > 0 && !isLoading;
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [value, setValue] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [attachmentError, setAttachmentError] = useState("");
+  const trimmedValue = value.trim();
+  const canSubmit = (trimmedValue.length > 0 || Boolean(selectedImage)) && !isLoading;
 
-  useEffect(() => {
+  const syncTextareaHeight = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea) {
       return;
     }
 
     textarea.style.height = "0px";
-
-    const nextHeight = Math.min(textarea.scrollHeight, 144);
+    const nextHeight = Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT);
     textarea.style.height = `${nextHeight}px`;
-    textarea.style.overflowY = textarea.scrollHeight > 144 ? "auto" : "hidden";
-  }, [value]);
+    textarea.style.overflowY = textarea.scrollHeight > MAX_TEXTAREA_HEIGHT ? "auto" : "hidden";
+  }, []);
+
+  useLayoutEffect(() => {
+    syncTextareaHeight();
+  }, [syncTextareaHeight, value]);
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    textareaRef.current?.focus();
+  }, [isLoading]);
+
+  const handleFileSelect = (file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setAttachmentError("Можно прикрепить только изображение.");
+      setSelectedImage(null);
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      setAttachmentError("Изображение не должно превышать 15 МБ.");
+      setSelectedImage(null);
+      return;
+    }
+
+    setAttachmentError("");
+    setSelectedImage(file);
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!canSubmit) {
+      return;
+    }
+
+    const messageContent = value;
+    const attachedFiles = selectedImage ? [selectedImage] : undefined;
+    setValue("");
+    setSelectedImage(null);
+    setAttachmentError("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    if (attachedFiles?.length) {
+      await onSubmitMessage(messageContent, attachedFiles);
+      return;
+    }
+
+    await onSubmitMessage(messageContent);
+  };
 
   return (
-    <form className={styles.wrap} onSubmit={onSubmit}>
+    <form aria-busy={isLoading} className={styles.wrap} onSubmit={handleSubmit}>
+      <input
+        accept="image/*"
+        className={styles.fileInput}
+        onChange={(event) => handleFileSelect(event.currentTarget.files?.[0] ?? null)}
+        ref={fileInputRef}
+        type="file"
+      />
+
+      {selectedImage ? (
+        <div className={styles.attachment}>
+          <div className={styles.attachmentMeta}>
+            <Icon name="image" size={16} />
+            <span className={styles.attachmentName}>{selectedImage.name}</span>
+          </div>
+
+          <button
+            aria-label="Удалить прикрепленное изображение"
+            className={styles.attachmentRemove}
+            onClick={() => {
+              setSelectedImage(null);
+              setAttachmentError("");
+
+              if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+              }
+            }}
+            type="button"
+          >
+            <Icon name="close" size={14} />
+          </button>
+        </div>
+      ) : null}
+
+      {attachmentError ? <ErrorMessage message={attachmentError} /> : null}
+
       <div className={styles.controls}>
         <button
           aria-label="Прикрепить изображение"
           className={styles.iconButton}
-          disabled
+          disabled={isLoading}
+          onClick={() => fileInputRef.current?.click()}
           type="button"
         >
           <Icon name="image" size={18} />
         </button>
 
         <textarea
+          aria-label="Введите сообщение"
           className={styles.textarea}
-          onChange={onChange}
+          disabled={isLoading}
+          enterKeyHint={isLoading ? "done" : "send"}
+          onChange={(event) => {
+            setValue(event.target.value);
+          }}
           onKeyDown={(event) => {
             if (event.nativeEvent.isComposing) {
               return;
@@ -63,7 +166,11 @@ export function InputArea({
               event.currentTarget.form?.requestSubmit();
             }
           }}
-          placeholder="Введите сообщение. Enter отправляет, Shift+Enter переносит строку."
+          placeholder={
+            isLoading
+              ? "Дождитесь ответа ассистента..."
+              : "Введите сообщение или прикрепите изображение. Enter отправляет, Shift+Enter переносит строку."
+          }
           ref={textareaRef}
           rows={1}
           value={value}
@@ -77,14 +184,17 @@ export function InputArea({
             </Button>
           ) : null}
 
-          <Button disabled={!isLoading} onClick={onStop} type="button" variant="ghost">
-            <Icon name="stop" size={18} />
-            Стоп
-          </Button>
-          <Button disabled={!canSubmit} type="submit">
-            <Icon name="send" size={18} />
-            {isLoading ? "Отправка..." : "Отправить"}
-          </Button>
+          {isLoading ? (
+            <Button onClick={onStop} type="button" variant="ghost">
+              <Icon name="stop" size={18} />
+              Стоп
+            </Button>
+          ) : (
+            <Button disabled={!canSubmit} type="submit">
+              <Icon name="send" size={18} />
+              Отправить
+            </Button>
+          )}
         </div>
       </div>
     </form>

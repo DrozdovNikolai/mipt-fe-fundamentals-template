@@ -12,7 +12,8 @@ type IconName =
   | "warning"
   | "spark"
   | "copy"
-  | "close";
+  | "close"
+  | "check";
 
 interface IconProps {
   name: IconName;
@@ -129,6 +130,12 @@ export function Icon({ name, size = 20 }: IconProps) {
       return (
         <svg aria-hidden="true" {...commonProps}>
           <path d="m6 6 12 12M18 6 6 18" />
+        </svg>
+      );
+    case "check":
+      return (
+        <svg aria-hidden="true" {...commonProps}>
+          <path d="m5 12 4.2 4.2L19 6.5" />
         </svg>
       );
     default:
